@@ -1,0 +1,41 @@
+name: CI
+
+# Trigger the workflow on both push (to the main repository, on the main branch)
+# and pull requests (against the main repository, but from any repo, from any branch).
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+# Brand new concurrency setting! This ensures that not more than one run can be triggered for the same commit.
+# It is useful for pull requests coming from the main repository since both triggers will match.
+concurrency: lint-${{ github.sha }}
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    env:
+      POETRY_VIRTUALENVS_CREATE: "false"
+      PYTHON_VERSION: "3.11"
+
+    steps:
+      - name: Checks out repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: pip install poetry; poetry install
+
+      - name: Run pre-commit hooks
+        run: |
+          poetry run pre-commit
+
+      - name: Unit testing
+        run: |
+          poetry run pytest
