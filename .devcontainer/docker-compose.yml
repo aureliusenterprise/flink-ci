@@ -40,7 +40,7 @@ services:
     depends_on:
       - zookeeper
     volumes:
-      - ./code:/code
+      - code:/code
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
@@ -73,9 +73,8 @@ services:
     volumes:
       - checkpoints:/tmp/flink-checkpoints-directory
     network_mode: service:dev
-
-volumes:
+    
+volumes: 
   esdata:
-    driver: local
   checkpoints:
-    driver: local
+  code:

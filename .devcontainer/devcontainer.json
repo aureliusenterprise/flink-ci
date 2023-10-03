@@ -21,7 +21,7 @@
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
-	"initializeCommand": "bash ./build_images.sh",
+	"initializeCommand": "bash .devcontainer/initialize.sh",
 	"postCreateCommand": "bash .devcontainer/postcreate.sh",
 
 	// Configure tool-specific properties.
