@@ -2,15 +2,11 @@ version: '3'
 
 services:
   dev: 
-    build: 
-      context: .
-      dockerfile: Dockerfile
-
+    image: mcr.microsoft.com/devcontainers/python:1-3.10-bullseye
+    environment: 
+      POETRY_VIRTUALENVS_IN_PROJECT: true
     volumes:
-      # This is where VS Code should expect to find your project's source code and the value of "workspaceFolder" in .devcontainer/devcontainer.json
       - ..:/workspaces/flink-ci:cached
-
-    # Overrides default command so things don't shut down after the process ends.
     command: /bin/sh -c "while sleep 1000; do :; done"  
 
   elasticsearch:
@@ -20,7 +16,7 @@ services:
       - node.name=elasticsearch
       - cluster.name=docker-cluster
       - discovery.type=single-node
-      - "ELASTICSEARCH_USERNAME=user"
+      - "ELASTICSEARCH_UaSERNAME=user"
       - "ELASTICSEARCH_PASSWORD=password"
     volumes:
       - esdata:/usr/share/elasticsearch/data
@@ -56,7 +52,6 @@ services:
     container_name: pyflink-jobmanager
     environment:
       FLINK_PROPERTIES: "jobmanager.rpc.address: pyflink-jobmanager"
-      PATH_TO_LIB: ""
     command: jobmanager
     volumes:
       - checkpoints:/tmp/flink-checkpoints-directory
