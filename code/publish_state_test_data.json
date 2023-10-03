@@ -1,0 +1,38 @@
+{
+    "income": [
+        {
+            "kafka_notification":{"message": {"entity": {"guid": "some_guid"}}},
+            "atlas_entity":{"some": 1},
+            "msg_creation_time":12,
+            "event_time":1,
+            "atlas_entity_audit":{},
+            "supertypes":[]
+        },
+        {
+            "msg_creation_time":13,
+            "event_time":3,
+            "atlas_entity_audit":{},
+            "supertypes":[]
+        }
+    ],
+    "outcome": [
+        {
+            "kafka_notification":{"message": {"entity": {"guid": "some_guid"}}},
+            "atlas_entity":{"some": 1},
+            "msg_creation_time":12,
+            "event_time":1,
+            "atlas_entity_audit":{},
+            "supertypes":[]
+        }
+    ],
+    "deadletters": [
+        {
+            "timestamp": 1695385398.6225812,
+            "originalNotification": "{\"msgCreationTime\": 13, \"eventTime\": 3, \"atlasEntityAudit\": {}, \"supertypes\": [], \"kafkaNotification\": null, \"atlasEntity\": null, \"previouseVersion\": null}",
+            "job": "publish_state",
+            "description": "asd",
+            "exceptionClass": "EventParsingException",
+            "remark": null
+        }
+    ]
+}

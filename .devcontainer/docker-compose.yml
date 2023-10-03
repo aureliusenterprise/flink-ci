@@ -1,0 +1,81 @@
+version: '3'
+
+services:
+  dev: 
+    build: 
+      context: .
+      dockerfile: Dockerfile
+
+    volumes:
+      # This is where VS Code should expect to find your project's source code and the value of "workspaceFolder" in .devcontainer/devcontainer.json
+      - ..:/workspaces/flink-ci:cached
+
+    # Overrides default command so things don't shut down after the process ends.
+    command: /bin/sh -c "while sleep 1000; do :; done"  
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
+    container_name: elasticsearch
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=docker-cluster
+      - discovery.type=single-node
+      - "ELASTICSEARCH_USERNAME=user"
+      - "ELASTICSEARCH_PASSWORD=password"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    network_mode: service:dev
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.2
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    network_mode: service:dev
+
+  kafka-broker:
+    image: confluentinc/cp-kafka:7.3.2
+    container_name: kafka-broker
+    depends_on:
+      - zookeeper
+    volumes:
+      - ./code:/code
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka-broker:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    network_mode: service:dev
+
+  pyflink-jobmanager:
+    image: pyflink-kafka:0.1
+    container_name: pyflink-jobmanager
+    environment:
+      FLINK_PROPERTIES: "jobmanager.rpc.address: pyflink-jobmanager"
+      PATH_TO_LIB: ""
+    command: jobmanager
+    volumes:
+      - checkpoints:/tmp/flink-checkpoints-directory
+    network_mode: service:dev
+
+  pyflink-taskmanager:
+    image: pyflink-kafka:0.1
+    container_name: pyflink-taskmanager
+    environment: 
+      FLINK_PROPERTIES: "jobmanager.rpc.address: pyflink-jobmanager"
+    command: taskmanager
+    depends_on: 
+     - pyflink-jobmanager
+    volumes:
+      - checkpoints:/tmp/flink-checkpoints-directory
+    network_mode: service:dev
+
+volumes:
+  esdata:
+    driver: local
+  checkpoints:
+    driver: local

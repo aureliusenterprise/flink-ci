@@ -18,7 +18,7 @@ jobs:
 
     env:
       POETRY_VIRTUALENVS_CREATE: "false"
-      PYTHON_VERSION: "3.11"
+      PYTHON_VERSION: "3.10"
 
     steps:
       - name: Checks out repository
@@ -34,7 +34,7 @@ jobs:
 
       - name: Run pre-commit hooks
         run: |
-          poetry run pre-commit
+          poetry run pre-commit --all-files
 
       - name: Unit testing
         run: |

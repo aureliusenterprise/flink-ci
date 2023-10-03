@@ -1,0 +1,48 @@
+version: '3.6'
+
+services:
+# Flink cluster
+  pyflink-jobmanager:
+    image: aurelius-pyflink-kafka:0.1
+    container_name: pyflink-jobmanager
+    ports:
+      - "8081:8081"
+    environment:
+      FLINK_PROPERTIES: "jobmanager.rpc.address: pyflink-jobmanager"
+    command: jobmanager
+    volumes:
+      - ./checkpoints:/tmp/flink-checkpoints-directory
+    networks:
+      - default
+
+  pyflink-taskmanager-1:
+    image: aurelius-pyflink-kafka:0.1
+    container_name: pyflink-taskmanager-1
+    environment: 
+      FLINK_PROPERTIES: "jobmanager.rpc.address: pyflink-jobmanager"
+    command: taskmanager
+    depends_on: 
+     - pyflink-jobmanager
+    volumes:
+      - ./checkpoints:/tmp/flink-checkpoints-directory
+    networks:
+      - default
+      - kafka
+
+  pyflink-taskmanager-2:
+    image: aurelius-pyflink-kafka:0.1
+    container_name: pyflink-taskmanager-2
+    environment: 
+      FLINK_PROPERTIES: "jobmanager.rpc.address: pyflink-jobmanager"
+    command: taskmanager
+    depends_on: 
+     - pyflink-jobmanager
+    networks:
+      - default
+      - kafka
+
+networks:
+  kafka:
+    name: kafka_cluster_default
+    external: true
+     
