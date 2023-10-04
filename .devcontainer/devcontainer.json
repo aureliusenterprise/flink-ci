@@ -10,16 +10,13 @@
 
 	// The 'workspaceFolder' property is the path VS Code should open by default when
 	// connected. Corresponds to a volume mount in .devcontainer/docker-compose.yml
-	"workspaceFolder": "/workspaces/flink-ci",
+	"workspaceFolder": "/workspace",
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
 		"ghcr.io/devcontainers-contrib/features/poetry:2": {},
 		"ghcr.io/devcontainers-contrib/features/ruff:1": {}
 	},
-
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
 
 	"initializeCommand": "bash .devcontainer/initialize.sh",
 	"postCreateCommand": "bash .devcontainer/postcreate.sh",
@@ -44,6 +41,21 @@
 				"yzhang.markdown-all-in-one",
 				"ms-azuretools.vscode-docker"
 			]
+		}
+	},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [8081, 9200],
+
+	"portsAttributes": {
+		"8081": {
+			"label": "Apache Flink UI"
+		},
+		"8082": {
+			"label": "Kafka UI"
+		},
+		"9200": {
+			"label": "Elasticsearch API"
 		}
 	}
 }
