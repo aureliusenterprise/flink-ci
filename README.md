@@ -16,45 +16,6 @@ Happy coding!
 
 ## Installation
 
-Below are instructions on various ways to install this project. You can choose to either:
-
-1. [Set up a local development environment](#local-installation), or
-2. [Use the provided development container](#dev-container-installation) (requires Docker)
-
-### Local Installation
-
-To develop this project on your local machine, follow the steps outlined below.
-
-> **Note**: Ensure you have Python version 3.10 installed. If not, download it from [here](https://www.python.org/downloads/).
-
-1. This project uses [Poetry](https://python-poetry.org/) as a dependency manager. Run the following command to install Poetry:
-
-```bash
-python -m pip install poetry
-```
-
-2. Next, navigate to the folder where you want the repository to be stored and run the following command to clone the git repository:
-
-```bash
-git clone https://github.com/thijs-franck/python-template
-```
-
-3. Navigate to the root of the repository and run the following command. Poetry will create a virtual environment and install all the necessary dependencies in it.
-
-```bash
-poetry install
-```
-
-4. Finally, install the pre-commit hook for your local repository by running the following command:
-
-```bash
-poetry run pre-commit install
-```
-
-6. You're all set! You can now run, develop, build, and test the project in your local development environment.
-
-### Dev Container Installation
-
 This project includes a [development container](https://containers.dev/) to simplify the setup process and provide a consistent development environment.
 
 You can use the dev container locally with either [Visual Studio Code](#visual-studio-code) or [PyCharm](#pycharm), or remotely with [GitHub Codespaces](#github-codespaces).
@@ -67,7 +28,7 @@ You can use the dev container locally with either [Visual Studio Code](#visual-s
 
 2. Make sure the Docker agent is running, and open Visual Studio Code.
 
-3. Press `F1` to open the command palette, and then type "Dev-Containers: Clone Repository in Container Volume" and select it from the list. Alternatively, you can click on the green icon in the bottom-left corner of the VS Code window and select "Dev-Containers: Clone Repository in Container Volume" from the popup menu.
+3. Press `F1` to open the command palette, and then type "Dev Containers: Clone Repository in Container Volume" and select it from the list. Alternatively, you can click on the green icon in the bottom-left corner of the VS Code window and select "Clone Repository in Container Volume" from the popup menu.
 
 4. Next, the command palette will ask you for the repository URL. Copy the URL of the GitHub repository, paste it into the command palette and confirm by pressing `Enter`.
 
