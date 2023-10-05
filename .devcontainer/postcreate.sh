@@ -21,4 +21,4 @@ git config --global --add safe.directory $PWD
 poetry run pre-commit install
 
 # Install local package for development
-.venv/bin/pip install -e .
+.venv/bin/pip install --no-deps -e .
