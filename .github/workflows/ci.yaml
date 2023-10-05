@@ -34,7 +34,7 @@ jobs:
 
       - name: Run pre-commit hooks
         run: |
-          poetry run pre-commit --all-files
+          poetry run pre-commit run --all-files
 
       - name: Unit testing
         run: |
