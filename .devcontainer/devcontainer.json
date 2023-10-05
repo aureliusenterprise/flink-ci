@@ -43,10 +43,14 @@
 	},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	"forwardPorts": [
+		8081,
 		8082,
 		9200
 	],
 	"portsAttributes": {
+		"8081": {
+			"label": "Flink UI"
+		},
 		"8082": {
 			"label": "Kafka UI"
 		},
