@@ -19,3 +19,6 @@ git config --global --add safe.directory $PWD
 
 # Install pre-commit hooks
 poetry run pre-commit install
+
+# Install local package for development
+.venv/bin/pip install -e .

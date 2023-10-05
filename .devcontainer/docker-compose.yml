@@ -2,10 +2,13 @@ version: '3'
 
 services:
   dev:
-    image: mcr.microsoft.com/vscode/devcontainers/python:3.10
+    image: flink:1.17.0
     environment:
+      FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
       POETRY_VIRTUALENVS_IN_PROJECT: true
-    command: /bin/sh -c "while sleep 1000; do :; done"
+    command: jobmanager
+    volumes:
+      - checkpoints:/tmp/flink-checkpoints-directory
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
@@ -60,6 +63,19 @@ services:
     network_mode: service:dev
     restart: unless-stopped
 
+  pyflink-taskmanager:
+    image: flink:1.17.0
+    environment:
+      FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
+    command: taskmanager
+    depends_on:
+      - dev
+    volumes:
+      - checkpoints:/tmp/flink-checkpoints-directory
+    network_mode: service:dev
+    restart: unless-stopped
+
 volumes:
   esdata:
+  checkpoints:
   code:
