@@ -2,13 +2,10 @@ version: '3'
 
 services:
   dev:
-    image: flink:1.17.0
+    image: mcr.microsoft.com/vscode/devcontainers/python:3.10
     environment:
-      FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
       POETRY_VIRTUALENVS_IN_PROJECT: true
-    command: jobmanager
-    volumes:
-      - checkpoints:/tmp/flink-checkpoints-directory
+    command: /bin/sh -c "while sleep 1000; do :; done"
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
@@ -54,6 +51,8 @@ services:
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
+    depends_on:
+      - kafka-broker
     environment:
       - KAFKA_CLUSTERS_0_NAME=local
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=localhost:9092
@@ -61,19 +60,6 @@ services:
     network_mode: service:dev
     restart: unless-stopped
 
-  pyflink-jobmanager:
-    image: flink:1.17.0
-    environment:
-      FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
-    command: taskmanager
-    depends_on:
-      - dev
-    volumes:
-      - checkpoints:/tmp/flink-checkpoints-directory
-    network_mode: service:dev
-    restart: unless-stopped
-
 volumes:
   esdata:
-  checkpoints:
   code:
