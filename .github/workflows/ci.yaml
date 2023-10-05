@@ -37,7 +37,7 @@ jobs:
 
       - name: Set Poetry environment
         run: |
-          poetry env use 3.10
+          poetry env use ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
         run: poetry install
