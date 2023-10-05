@@ -19,6 +19,3 @@ git config --global --add safe.directory $PWD
 
 # Install pre-commit hooks
 poetry run pre-commit install
-
-# Install flink jobs in venv
-.venv/bin/pip install -e .
