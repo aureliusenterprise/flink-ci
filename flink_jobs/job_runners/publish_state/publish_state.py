@@ -41,15 +41,14 @@ class PublishState:
         self.input_validation = ValidateKafkaNotifications(self.data_stream)
 
         self.previous_entity_retrieval = GetPreviousEntity(
-            self.input_validation.validated_notifications,
+            self.input_validation.main,
             self.elastic_client,
         )
 
         self.index_preparation = PrepareNotificationToIndex(
-            self.input_validation.validated_notifications,
+            self.input_validation.main,
         )
 
-        self.dead_letter = self.input_validation.schema_validation_errors.union(
-            self.input_validation.no_entity_errors,
-            self.previous_entity_retrieval.lookup_errors,
+        self.errors = self.input_validation.errors.union(
+            self.previous_entity_retrieval.errors,
         )

@@ -4,10 +4,9 @@ from marshmallow import ValidationError
 from pyflink.datastream import DataStream, OutputTag
 from pyflink.datastream.functions import ProcessFunction
 
-from flink_jobs.flink_dataclasses import KafkaNotification
 from flink_jobs.job_runners import AtlasProcessFunction
 
-from .model import ValidatedInput
+from .model import KafkaNotification, ValidatedInput
 
 # Constants for job name and error tags
 JOB_NAME = "publish_state"

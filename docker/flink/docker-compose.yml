@@ -18,10 +18,10 @@ services:
   pyflink-taskmanager-1:
     image: aurelius-pyflink-kafka:0.1
     container_name: pyflink-taskmanager-1
-    environment: 
+    environment:
       FLINK_PROPERTIES: "jobmanager.rpc.address: pyflink-jobmanager"
     command: taskmanager
-    depends_on: 
+    depends_on:
      - pyflink-jobmanager
     volumes:
       - ./checkpoints:/tmp/flink-checkpoints-directory
@@ -32,10 +32,10 @@ services:
   pyflink-taskmanager-2:
     image: aurelius-pyflink-kafka:0.1
     container_name: pyflink-taskmanager-2
-    environment: 
+    environment:
       FLINK_PROPERTIES: "jobmanager.rpc.address: pyflink-jobmanager"
     command: taskmanager
-    depends_on: 
+    depends_on:
      - pyflink-jobmanager
     networks:
       - default
@@ -45,4 +45,3 @@ networks:
   kafka:
     name: kafka_cluster_default
     external: true
-     

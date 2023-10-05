@@ -30,7 +30,7 @@ class PrepareNotificationToIndex(AtlasProcessFunction):
         """
         super().__init__(input_stream, JOB_NAME)
 
-        self.prepared_documents = (
+        self.main = (
             self.input_stream
             .filter(lambda notif: notif)
             .process(self, Types.STRING())

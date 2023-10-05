@@ -2,10 +2,13 @@ version: '3'
 
 services:
   dev:
-    image: mcr.microsoft.com/devcontainers/python:1-3.10-bullseye
+    image: flink:1.17.0
     environment:
+      FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
       POETRY_VIRTUALENVS_IN_PROJECT: true
-    command: /bin/sh -c "while sleep 1000; do :; done"
+    command: jobmanager
+    volumes:
+      - checkpoints:/tmp/flink-checkpoints-directory
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
@@ -59,24 +62,12 @@ services:
     restart: unless-stopped
 
   pyflink-jobmanager:
-    image: pyflink-kafka:0.1
-    container_name: pyflink-jobmanager
+    image: flink:1.17.0
     environment:
-      FLINK_PROPERTIES: "jobmanager.rpc.address: pyflink-jobmanager"
-    command: jobmanager
-    volumes:
-      - checkpoints:/tmp/flink-checkpoints-directory
-    network_mode: service:dev
-    restart: unless-stopped
-
-  pyflink-taskmanager:
-    image: pyflink-kafka:0.1
-    container_name: pyflink-taskmanager
-    environment:
-      FLINK_PROPERTIES: "jobmanager.rpc.address: pyflink-jobmanager"
+      FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
     command: taskmanager
     depends_on:
-      - pyflink-jobmanager
+      - dev
     volumes:
       - checkpoints:/tmp/flink-checkpoints-directory
     network_mode: service:dev

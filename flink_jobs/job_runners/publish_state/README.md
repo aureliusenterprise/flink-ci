@@ -1,4 +1,4 @@
-## Specification 
+## Specification
 
 ### Input
 
@@ -38,16 +38,16 @@ json data to Kafka topic have a next format
     exception_class: str
     remark: str
 
-### Process 
+### Process
 
 #### 1. Check input
 
 * if not follow the specification produce deadletterbox message
 * if input has no kafka_notification produce deadletterbox message
 
-#### 2. Process input 
+#### 2. Process input
 * if no altas entity atlas_entity, set previouse_version to None, produce ENRICHED_ENTITIES_SAVED and finish
-* if no guid in input kafka_notification.entity make warn log 
+* if no guid in input kafka_notification.entity make warn log
 * index with doc_id = quid+msg_creation_time next document
 
 		{"msgCreationTime": msg_creation_time, "eventTime": event_time, "body": atlas_entity }

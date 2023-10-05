@@ -67,3 +67,6 @@ venv.bak/
 
 # ruff
 .ruff_cache/
+
+# JAR files
+*.jar

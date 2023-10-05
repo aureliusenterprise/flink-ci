@@ -11,8 +11,8 @@ from flink_jobs.job_runners import AtlasProcessFunction
 from .model import ValidatedInput, ValidatedInputWithPreviousEntity
 
 JOB_NAME = "publish_state"
-DEAD_LETTER_TAG = OutputTag("dead_letter")
-
+ELASTICSEARCH_ERROR = OutputTag("elastic_error")
+NO_PREVIUS_ENTITY_ERROR = OutputTag("no_previous_entity")
 
 class GetPreviousEntity(AtlasProcessFunction):
     """
@@ -37,22 +37,30 @@ class GetPreviousEntity(AtlasProcessFunction):
 
         self.elastic_client = elastic_client
 
-        self.previous_entity_lookup = (
+        self.main = (
             self.input_stream
             .filter(lambda notif: notif)
             .process(self, Types.STRING())
             .name("previous_entity_lookup")
         )
 
-        self.lookup_errors = self.previous_entity_lookup.get_side_output(
-            DEAD_LETTER_TAG,
+        self.elastic_errors = self.main.get_side_output(
+            ELASTICSEARCH_ERROR,
+        )
+
+        self.no_previous_entity_errors = self.main.get_side_output(
+            NO_PREVIUS_ENTITY_ERROR,
+        )
+
+        self.errors = self.elastic_errors.union(
+            self.no_previous_entity_errors,
         )
 
     def process_element(
         self,
         value: ValidatedInput,
         _: ProcessFunction.Context | None = None,
-    ) -> str | tuple[OutputTag, str]:
+    ) -> str | tuple[OutputTag, Exception]:
         """
         Process each element to retrieve the previous entity.
 
@@ -79,14 +87,11 @@ class GetPreviousEntity(AtlasProcessFunction):
                 creation_time=msg_creation_time,
             )
         except ElasticPreviousStateRetrieveError as e:
-            return self.create_exception_output(DEAD_LETTER_TAG, str(value), e)
+            return ELASTICSEARCH_ERROR, e
 
         if previous_version is None:
-            return self.create_error_output(
-                DEAD_LETTER_TAG,
-                str(value),
-                "No previous version found for entity",
-                "NoPreviousVersionError",
+            return NO_PREVIUS_ENTITY_ERROR, ValueError(
+                f"No previous version found for entity {entity_guid}",
             )
 
         result = ValidatedInputWithPreviousEntity(
