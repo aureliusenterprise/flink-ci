@@ -19,7 +19,7 @@ jobs:
     container: flink:1.17.0
 
     env:
-      POETRY_VERSION: "1.6"
+      POETRY_VERSION: "1.6.1"
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
       PYTHON_VERSION: "3.10"
 
