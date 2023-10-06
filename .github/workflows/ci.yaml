@@ -19,6 +19,7 @@ jobs:
     container: flink:1.17.0
 
     env:
+      POETRY_VERSION: "1.6"
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
       PYTHON_VERSION: "3.10"
 
@@ -26,19 +27,11 @@ jobs:
       - name: Checks out repository
         uses: actions/checkout@v3
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v3
+      - name: Set up Python ${{ env.PYTHON_VERSION }}, Poetry and Dependencies
+        uses: packetcoders/action-setup-cache-python-poetry@main
         with:
+          poetry-version: ${{ env.POETRY_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: poetry
-          cache-dependency-path: poetry.lock
-
-      - name: Install Poetry
-        run: |
-          pipx install poetry
-
-      - name: Install dependencies
-        run: poetry install
 
       - name: Run pre-commit hooks
         run: |
