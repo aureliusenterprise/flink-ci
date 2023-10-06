@@ -26,10 +26,6 @@ jobs:
       - name: Checks out repository
         uses: actions/checkout@v3
 
-      - name: Install Poetry
-        run: |
-          pipx install poetry
-
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v3
         with:
@@ -37,9 +33,9 @@ jobs:
           cache: poetry
           cache-dependency-path: poetry.lock
 
-      - name: Set Poetry environment
+      - name: Install Poetry
         run: |
-          poetry env use ${{ env.PYTHON_VERSION }}
+          pipx install poetry
 
       - name: Install dependencies
         run: poetry install
