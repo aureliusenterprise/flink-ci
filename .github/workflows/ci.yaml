@@ -33,6 +33,11 @@ jobs:
           poetry-version: ${{ env.POETRY_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
 
+      - name: Install git
+        run: |
+          apt-get update
+          apt-get install -y git
+
       - name: Run pre-commit hooks
         run: |
           poetry run pre-commit run --all-files
