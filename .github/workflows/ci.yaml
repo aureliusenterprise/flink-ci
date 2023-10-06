@@ -24,6 +24,11 @@ jobs:
       PYTHON_VERSION: "3.10"
 
     steps:
+      - name: Install git
+        run: |
+          apt-get update
+          apt-get install -y git
+
       - name: Checks out repository
         uses: actions/checkout@v3
 
@@ -32,11 +37,6 @@ jobs:
         with:
           poetry-version: ${{ env.POETRY_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install git
-        run: |
-          apt-get update
-          apt-get install -y git
 
       - name: Run pre-commit hooks
         run: |
