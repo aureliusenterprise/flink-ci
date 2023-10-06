@@ -2,102 +2,39 @@ from typing import cast
 
 from marshmallow import ValidationError
 from pyflink.datastream import DataStream, OutputTag
-from pyflink.datastream.functions import ProcessFunction
-
-from flink_jobs.job_runners import AtlasProcessFunction
+from pyflink.datastream.functions import MapFunction
 
 from .model import KafkaNotification, ValidatedInput
 
-# Constants for job name and error tags
-JOB_NAME = "publish_state"
 SCHEMA_ERROR_TAG = OutputTag("dead_letter")
 NO_ENTITY_ERROR_TAG = OutputTag("no_entity")
 
-
-class ValidateKafkaNotifications(AtlasProcessFunction):
+class ValidationFunction(MapFunction):
     """
-    ProcessFunction for input validation on Kafka Notifications.
+    A custom MapFunction to validate incoming messages from a Kafka stream.
 
-    Attributes
-    ----------
-    main : DataStream
-        The main data stream that contains validated notifications.
-    schema_validation_errors : DataStream
-        A side output stream that captures schema validation errors.
-    no_entity_errors : DataStream
-        A side output stream that captures errors related to missing entities.
-    errors : DataStream
-        A unified stream of all validation errors for consolidated handling.
+    The function attempts to deserialize the input JSON string into a KafkaNotification
+    object and then validates the deserialized message. Errors in the deserialization
+    process or missing entity values in the message are forwarded to side outputs.
     """
 
-    def __init__(self, input_stream: DataStream) -> None:
-        """
-        Initialize the ValidateKafkaNotifications object.
-
-        This method sets up the main output stream based on the given input stream,
-        and also configures any side outputs.
-
-        Parameters
-        ----------
-        input_stream : DataStream
-            The input DataStream to be processed.
-        """
-        super().__init__(input_stream, JOB_NAME)
-
-        # Set up the main data stream
-        self.main = (
-            self.input_stream
-            .process(self)
-            .name("validated_notifications")
-        )
-
-        # Capture schema validation errors as a side output
-        self.schema_validation_errors = (
-            self.main
-            .get_side_output(SCHEMA_ERROR_TAG)
-            .name("schema_errors")
-        )
-
-        # Capture errors related to missing entities as a side output
-        self.no_entity_errors = (
-            self.main
-            .get_side_output(NO_ENTITY_ERROR_TAG)
-            .name("no_entity_errors")
-        )
-
-        # Union of all error streams for consolidated error handling or logging
-        self.errors = (
-            self.schema_validation_errors
-            .union(self.no_entity_errors)
-            .name("input_validation_errors")
-        )
-
-    def process_element(
+    def map( # noqa: A003
         self,
         value: str,
-        _: ProcessFunction.Context | None = None,
     ) -> ValidatedInput | tuple[OutputTag, Exception]:
         """
-        Process and validate the content of each Kafka notification.
-
-        The input validation step includes the following checks:
-
-        1. Ensures the message adheres to the schema.
-        2. Checks the presence of required content in the message.
+        Deserialize and validate the input message.
 
         Parameters
         ----------
         value : str
-            The input value, which is a serialized JSON string representing the Kafka notification.
-        _ : ProcessFunction.Context, optional
-            The context for the ProcessFunction. This is not used in this function.
+            The input JSON string.
 
         Returns
         -------
         ValidatedInput or tuple[OutputTag, Exception]
-            - `ValidatedInput` object on the main output if the input is valid.
-            - If the input doesn't match the schema, return a `ValidationError` on the error output.
-            - If the input doesn't include an entity, return a `ValueError` on the error output.
+            ValidatedInput object if the message is valid, else a tuple containing an
+            OutputTag indicating the error type and the exception raised.
         """
         try:
             # Deserialize the JSON string into a KafkaNotification object.
@@ -119,3 +56,48 @@ class ValidateKafkaNotifications(AtlasProcessFunction):
             message_object.event_time,
             message_object.msg_creation_time,
         )
+
+class ValidateKafkaNotifications:
+    """
+    A class that sets up the Flink data streams for validating Kafka notifications.
+
+    This class initializes the data streams, applies the validation logic, and
+    organizes the output into `main`, `schema_errors`, `no_entity_errors`, and `errors` streams.
+
+    Attributes
+    ----------
+    input_stream : DataStream
+        The input stream of Kafka notifications.
+    main : DataStream
+        The main output stream containing validated messages.
+    schema_errors : DataStream
+        The side output stream for messages that failed schema validation.
+    no_entity_errors : DataStream
+        The side output stream for messages without entities.
+    errors : DataStream
+        The union of schema_errors and no_entity_errors.
+    """
+
+    def __init__(self, input_stream: DataStream) -> None:
+        self.input_stream = input_stream
+
+        # Set up the main data stream
+        self.main = (
+            self.input_stream
+            .map(ValidationFunction())
+            .name("validated_notifications")
+        )
+
+        self.schema_errors = (
+            self.main
+            .get_side_output(SCHEMA_ERROR_TAG)
+            .name("schema_errors")
+        )
+
+        self.no_entity_errors = (
+            self.main
+            .get_side_output(NO_ENTITY_ERROR_TAG)
+            .name("no_entity_errors")
+        )
+
+        self.errors = self.schema_errors.union(self.no_entity_errors)

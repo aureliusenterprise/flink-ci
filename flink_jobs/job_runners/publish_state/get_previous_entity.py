@@ -1,82 +1,66 @@
-from pyflink.common.typeinfo import Types
-from pyflink.datastream import DataStream, OutputTag
-from pyflink.datastream.functions import ProcessFunction
+from elasticsearch import Elasticsearch
+from pyflink.datastream import DataStream, MapFunction, OutputTag, RuntimeContext
 
 from flink_jobs.elastic_client import (
     ElasticClient,
     ElasticPreviousStateRetrieveError,
 )
-from flink_jobs.job_runners import AtlasProcessFunction
 
 from .model import ValidatedInput, ValidatedInputWithPreviousEntity
 
-JOB_NAME = "publish_state"
 ELASTICSEARCH_ERROR = OutputTag("elastic_error")
-NO_PREVIUS_ENTITY_ERROR = OutputTag("no_previous_entity")
+NO_PREVIOUS_ENTITY_ERROR = OutputTag("no_previous_entity")
 
-class GetPreviousEntity(AtlasProcessFunction):
+class GetPreviousEntityFunction(MapFunction):
     """
-    A ProcessFunction for retrieving the previous version of an entity from Elasticsearch.
+    A custom `MapFunction` to retrieve the previous version of an entity from Elasticsearch.
+
+    This function communicates with an Elasticsearch instance to obtain the previous version
+    of an entity based on its GUID and creation time.
 
     Attributes
     ----------
+    elasticsearch : Elasticsearch
+        The Elasticsearch client instance.
     elastic_client : ElasticClient
-        An instance of ElasticClient used to query Elasticsearch.
+        Custom client for querying the desired Elasticsearch index.
     """
 
-    def __init__(self, input_stream: DataStream, elastic_client: ElasticClient) -> None:
+    def open(self, runtime_context: RuntimeContext) -> None: # noqa: A003
         """
-        Initialize the GetPreviousEntity object.
+        Initialize the Elasticsearch connection.
 
         Parameters
         ----------
-        elastic_client : ElasticClient
-            An instance of ElasticClient used to query Elasticsearch.
+        runtime_context : RuntimeContext
+            The runtime context of the Flink job.
         """
-        super().__init__(input_stream, JOB_NAME)
+        elasticsearch_host = runtime_context.get_job_parameter("ELASTICSEARCH_HOST", "http://localhost:9200")
+        self.elasticsearch = Elasticsearch(elasticsearch_host)
 
-        self.elastic_client = elastic_client
+        target_index = runtime_context.get_job_parameter("TARGET_INDEX", "atlas_entities_index")
+        self.elastic_client = ElasticClient(self.elasticsearch, target_index) # type: ignore
 
-        self.main = (
-            self.input_stream
-            .filter(lambda notif: notif)
-            .process(self, Types.STRING())
-            .name("previous_entity_lookup")
-        )
+    def close(self) -> None:
+        """Close the Elasticsearch connection."""
+        self.elasticsearch.close()
 
-        self.elastic_errors = self.main.get_side_output(
-            ELASTICSEARCH_ERROR,
-        )
-
-        self.no_previous_entity_errors = self.main.get_side_output(
-            NO_PREVIUS_ENTITY_ERROR,
-        )
-
-        self.errors = self.elastic_errors.union(
-            self.no_previous_entity_errors,
-        )
-
-    def process_element(
+    def map( # noqa: A003
         self,
         value: ValidatedInput,
-        _: ProcessFunction.Context | None = None,
-    ) -> str | tuple[OutputTag, Exception]:
+    ) -> ValidatedInputWithPreviousEntity | tuple[OutputTag, Exception]:
         """
-        Process each element to retrieve the previous entity.
+        Map function to retrieve the previous version of an entity.
 
         Parameters
         ----------
-        value : str
-            The input value, as a serialized JSON string.
-        _ : ProcessFunction.Context, optional
-            The Flink processor context, by default None. Not used by this method.
+        value : ValidatedInput
+            The input message containing the entity to lookup.
 
         Returns
         -------
-        str | tuple[OutputTag, str]
-            The main output is the serialized JSON string of the kafka notification
-            with the previous version. The side output is a tuple containing the error
-            tag and the serialized error message.
+        ValidatedInputWithPreviousEntity or tuple[OutputTag, Exception]
+            The enriched message with the previous entity version or an error tuple.
         """
         entity_guid = value.entity.guid
         msg_creation_time = value.msg_creation_time
@@ -90,15 +74,68 @@ class GetPreviousEntity(AtlasProcessFunction):
             return ELASTICSEARCH_ERROR, e
 
         if previous_version is None:
-            return NO_PREVIUS_ENTITY_ERROR, ValueError(
+            return NO_PREVIOUS_ENTITY_ERROR, ValueError(
                 f"No previous version found for entity {entity_guid}",
             )
 
-        result = ValidatedInputWithPreviousEntity(
+        return ValidatedInputWithPreviousEntity(
             value.entity,
             value.event_time,
             value.msg_creation_time,
             previous_version,
         )
 
-        return result.to_json()
+class GetPreviousEntity:
+    """
+    A class that sets up the Flink data stream for retrieving previous entity versions.
+
+    This class initializes the data stream and applies the `GetPreviousEntityFunction`
+    to fetch the previous entity versions. It organizes the output into `main`,
+    `elastic_errors`, `no_previous_entity_errors`, and `errors` streams.
+
+    Attributes
+    ----------
+    input_stream : DataStream
+        The input stream of validated messages.
+    main : DataStream
+        The main output stream containing messages with previous entities.
+    elastic_errors : DataStream
+        The side output stream for messages that encountered Elasticsearch errors.
+    no_previous_entity_errors : DataStream
+        The side output stream for messages without previous entities.
+    errors : DataStream
+        The union of elastic_errors and no_previous_entity_errors.
+    """
+
+    def __init__(self, input_stream: DataStream) -> None:
+        """
+        Initialize `GetPreviousEntity` with an input data stream.
+
+        Parameters
+        ----------
+        input_stream : DataStream
+            The input stream of validated notifications.
+        """
+        self.input_stream = input_stream
+
+        self.main = (
+            self.input_stream
+            .map(GetPreviousEntityFunction())
+            .name("previous_entity_lookup")
+        )
+
+        self.elastic_errors = (
+            self.main
+            .get_side_output(ELASTICSEARCH_ERROR)
+            .name("elastic_errors")
+        )
+
+        self.no_previous_entity_errors = (
+            self.main
+            .get_side_output(NO_PREVIOUS_ENTITY_ERROR)
+            .name("no_previous_entity_errors")
+        )
+
+        self.errors = self.elastic_errors.union(
+            self.no_previous_entity_errors,
+        )

@@ -1,73 +1,73 @@
 
 
-from pyflink.common.typeinfo import Types
-from pyflink.datastream import DataStream, OutputTag
-from pyflink.datastream.functions import ProcessFunction
-
-from flink_jobs.job_runners import AtlasProcessFunction
+from pyflink.datastream import DataStream
+from pyflink.datastream.functions import MapFunction
 
 from .model import EntityVersion, ValidatedInput
 
-JOB_NAME = "publish_state"
 
-
-class PrepareNotificationToIndex(AtlasProcessFunction):
+class PrapareNotificationToIndexFunction(MapFunction):
     """
-    A ProcessFunction to prepare notifications for indexing in Elasticsearch.
+    A custom `MapFunction` to prepare notifications for indexing.
 
-    This class extends AtlasProcessFunction and processes each element to prepare the
-    notification by validating and formatting the entity for Elasticsearch storage.
+    The function processes the validated input and transforms it into an `EntityVersion`
+    object suitable for indexing.
     """
 
-    def __init__(self, input_stream: DataStream) -> None:
+    def map(self, value: ValidatedInput) -> EntityVersion: # noqa: A003
         """
-        Initialize the PrepareNotificationToIndex object.
+        Transform a ValidatedInput message into an EntityVersion object.
 
         Parameters
         ----------
-        error_tag : OutputTag
-            An OutputTag to use for error output.
-        """
-        super().__init__(input_stream, JOB_NAME)
-
-        self.main = (
-            self.input_stream
-            .filter(lambda notif: notif)
-            .process(self, Types.STRING())
-            .name("index_preparation")
-        )
-
-    def process_element(
-        self,
-        value: ValidatedInput,
-        _: ProcessFunction.Context | None = None,
-    ) -> str | tuple[OutputTag, str]:
-        """
-        Prepare the given notification for indexing in Elasticsearch.
-
-        Parameters
-        ----------
-        value : KafkaNotification
-            The input value, a serialized JSON string representing the Kafka notification.
-        _ : ProcessFunction.Context, optional
-            The context, ignored in this function. Default is None.
+        value : ValidatedInput
+            The validated input message to be prepared for indexing.
 
         Returns
         -------
-        str | tuple[OutputTag, str]
-            If processing is successful, return a JSON string prepared for Elasticsearch.
-            If there is an error, it returns a tuple containing the error tag and error message.
+        EntityVersion
+            The transformed message, ready for indexing.
         """
         msg_creation_time = value.msg_creation_time
         event_time = value.event_time
 
         doc_id = f"{value.entity.guid}_{msg_creation_time}"
 
-        result = EntityVersion(
+        return EntityVersion(
             value.entity,
             doc_id,
             event_time,
             msg_creation_time,
         )
 
-        return result.to_json()
+class PrepareNotificationToIndex:
+    """
+    A class that sets up the Flink data stream for preparing notifications for indexing.
+
+    This class initializes the data stream and applies the transformation logic using
+    `PrapareNotificationToIndexFunction` to produce messages ready for indexing.
+
+    Attributes
+    ----------
+    input_stream : DataStream
+        The input stream of validated messages.
+    main : DataStream
+        The main output stream containing messages prepared for indexing.
+    """
+
+    def __init__(self, input_stream: DataStream) -> None:
+        """
+        Initialize the PrepareNotificationToIndex with an input data stream.
+
+        Parameters
+        ----------
+        input_stream : DataStream
+            The input stream of validated notifications.
+        """
+        self.input_stream = input_stream
+
+        self.main = (
+            self.input_stream
+            .map(PrapareNotificationToIndexFunction())
+            .name("index_preparation")
+        )

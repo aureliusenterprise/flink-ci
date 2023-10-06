@@ -16,6 +16,8 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
+    container: flink:1.17.0
+
     env:
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
       PYTHON_VERSION: "3.10"
