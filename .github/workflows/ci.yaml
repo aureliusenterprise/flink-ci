@@ -26,8 +26,8 @@ jobs:
     steps:
       - name: Install git
         run: |
-          apt-get update
-          apt-get install -y git
+          sudo apt-get update
+          sudo apt-get install -y git
 
       - name: Checks out repository
         uses: actions/checkout@v3
