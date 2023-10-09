@@ -24,10 +24,11 @@ jobs:
       PYTHON_VERSION: "3.10"
 
     steps:
-      - name: Install git
+      - name: Install git and mark current directory as safe
         run: |
           apt-get update
           apt-get install -y git
+          git config --global --add safe.directory $PWD
 
       - name: Checks out repository
         uses: actions/checkout@v3
@@ -38,18 +39,9 @@ jobs:
           poetry-version: ${{ env.POETRY_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Check if git is installed
-        run: |
-          echo $PWD
-          [ -d ".git" ] && echo "Directory .git exists." || echo "Error: Directory .git does not exist."
-          git --help
-
       - name: Run pre-commit hooks
-        uses: pre-commit/action@v3.0.0
-        continue-on-error: true
-
-      - name: Print pre-commit log
-        run: while read p; do echo "$p"; done < /github/home/.cache/pre-commit/pre-commit.log
+        run: | 
+          poetry run pre-commit run --all-files
 
       - name: Unit testing
         run: |
