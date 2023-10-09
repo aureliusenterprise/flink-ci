@@ -39,7 +39,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Run pre-commit hooks
-        uses: pre-commit/action@v3.0.0
+        run: |
+          echo $PWD
+          [ -d ".git" ] && echo "Directory .git exists." || echo "Error: Directory .git does not exist."
+          poetry run pre-commit run --all-files
 
       - name: Unit testing
         run: |
