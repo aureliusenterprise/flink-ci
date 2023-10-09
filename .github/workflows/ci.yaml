@@ -40,7 +40,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Run pre-commit hooks
-        run: | 
+        run: |
           poetry run pre-commit run --all-files
 
       - name: Unit testing
