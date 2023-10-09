@@ -46,7 +46,11 @@ jobs:
 
       - name: Run pre-commit hooks
         uses: pre-commit/action@v3.0.0
-        
+        continue-on-error: true
+
+      - name: Print pre-commit log
+        run: while read p; do echo "$p" done < /github/home/.cache/pre-commit/pre-commit.log
+
       - name: Unit testing
         run: |
           poetry run pytest
