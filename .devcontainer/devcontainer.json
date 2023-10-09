@@ -33,8 +33,6 @@
 				"python.testing.pytestEnabled": true
 			},
 			"extensions": [
-				"GitHub.copilot",
-				"GitHub.copilot-chat",
 				"charliermarsh.ruff",
 				"yzhang.markdown-all-in-one",
 				"ms-azuretools.vscode-docker"

@@ -8,6 +8,7 @@ services:
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
     command: jobmanager
     volumes:
+      - ..:/workspace:cached
       - checkpoints:/tmp/flink-checkpoints-directory
 
   elasticsearch:
