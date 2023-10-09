@@ -38,12 +38,15 @@ jobs:
           poetry-version: ${{ env.POETRY_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Run pre-commit hooks
+      - name: Check if git is installed
         run: |
           echo $PWD
           [ -d ".git" ] && echo "Directory .git exists." || echo "Error: Directory .git does not exist."
-          poetry run pre-commit run --all-files
+          git --help
 
+      - name: Run pre-commit hooks
+        uses: pre-commit/action@v3.0.0
+        
       - name: Unit testing
         run: |
           poetry run pytest
