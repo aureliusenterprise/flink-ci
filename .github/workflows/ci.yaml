@@ -49,7 +49,7 @@ jobs:
         continue-on-error: true
 
       - name: Print pre-commit log
-        run: while read p; do echo "$p" done < /github/home/.cache/pre-commit/pre-commit.log
+        run: while read p; do echo "$p"; done < /github/home/.cache/pre-commit/pre-commit.log
 
       - name: Unit testing
         run: |
