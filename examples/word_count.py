@@ -1,5 +1,4 @@
 from collections.abc import Generator
-from pathlib import Path
 
 from pyflink.common import Types
 from pyflink.datastream import StreamExecutionEnvironment
@@ -7,10 +6,6 @@ from pyflink.datastream import StreamExecutionEnvironment
 if __name__ == "__main__":
 
     env = StreamExecutionEnvironment.get_execution_environment()
-
-    # Add JARs to the classpath
-    jars = [path.absolute().as_uri() for path in Path("./jars").glob("*.jar")]
-    env.add_jars(*jars)
 
     # write all the data to one file
     env.set_parallelism(1)

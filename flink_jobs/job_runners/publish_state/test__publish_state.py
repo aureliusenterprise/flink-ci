@@ -7,6 +7,7 @@ from m4i_atlas_core import (
     EntityAuditAction,
     EntityNotificationType,
 )
+from marshmallow import ValidationError
 from pyflink.datastream import StreamExecutionEnvironment
 
 from .model import KafkaNotification, ValidatedInput
@@ -87,3 +88,31 @@ def test__publish_state_validate_input(
     output = list(publish_state.input_validation.main.execute_and_collect())
 
     assert output == expected
+
+def test__publish_state_validate_input_with_invalid_input(
+        environment: StreamExecutionEnvironment,
+) -> None:
+    """
+    Test the validation stage of the `PublishState` flow with invalid input.
+
+    This test checks if the input `KafkaNotification`, which is deliberately made invalid,
+    is correctly captured as a validation error and emitted on the `errors` output.
+    """
+    invalid_input = '{"msgCreationTime": 1, "eventTime": 1, "atlasEntityAudit": {}}'
+    data_stream = environment.from_collection([invalid_input])
+
+    publish_state = PublishState(data_stream)
+
+    output = list(publish_state.errors.execute_and_collect())
+
+    assert len(output) == 1
+
+    validation_error = output[0]
+
+    assert isinstance(validation_error, ValidationError)
+
+    expected_messages = {
+        "kafkaNotification": ["Missing data for required field."],
+    }
+
+    assert validation_error.messages == expected_messages
