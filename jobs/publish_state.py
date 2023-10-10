@@ -15,7 +15,7 @@ from flink_jobs import PublishState
 
 class PublishStateConfig(TypedDict):
     """
-    Configuration required to execute the PublishState Flink job.
+    Configuration required to execute the PublishState job.
 
     Attributes
     ----------

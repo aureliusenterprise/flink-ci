@@ -5,8 +5,7 @@ from flink_jobs.elastic_client import (
     ElasticClient,
     ElasticPreviousStateRetrieveError,
 )
-
-from .model import ValidatedInput, ValidatedInputWithPreviousEntity
+from flink_jobs.publish_state import ValidatedInput, ValidatedInputWithPreviousEntity
 
 ELASTICSEARCH_ERROR = OutputTag("elastic_error")
 NO_PREVIOUS_ENTITY_ERROR = OutputTag("no_previous_entity")

@@ -1,8 +1,6 @@
 from pyflink.datastream import DataStream
 
-from .get_previous_entity import GetPreviousEntity
-from .prepare_notification_to_index import PrepareNotificationToIndex
-from .verify_kafka_notification import ValidateKafkaNotifications
+from .operations import GetPreviousEntity, PrepareNotificationToIndex, ValidateKafkaNotifications
 
 
 class PublishState:

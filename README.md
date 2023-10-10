@@ -22,15 +22,46 @@ You can use the dev container locally with either [Visual Studio Code](#visual-s
 
 #### Visual Studio Code
 
+This section describes how to install the development container using Visual Studio Code. There are some differences in the setup process depending on your operating system.
+
 > **Note**: The following instructions assume that you have already installed [Docker](https://www.docker.com/) and [Visual Studio Code](https://code.visualstudio.com/).
 
-1. Install the [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) in Visual Studio Code.
+##### Prerequisites
 
-2. Make sure the Docker agent is running, and open Visual Studio Code.
+Regardless of your operating system, please install the [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) in Visual Studio Code.
 
-3. Press `F1` to open the command palette, and then type "Dev Containers: Clone Repository in Container Volume" and select it from the list. Alternatively, you can click on the green icon in the bottom-left corner of the VS Code window and select "Clone Repository in Container Volume" from the popup menu.
+##### For Windows:
 
-4. Next, the command palette will ask you for the repository URL. Copy the URL of the GitHub repository, paste it into the command palette and confirm by pressing `Enter`.
+1. Make sure the Docker Desktop is running, and open Visual Studio Code.
+
+2. Press F1 to open the command palette, and then type "Dev Containers: Clone Repository in Container Volume" and select it from the list. Alternatively, you can click on the green icon in the bottom-left corner of the VS Code window and select "Clone Repository in Container Volume" from the popup menu.
+
+3. Next, the command palette will ask you for the repository URL. Copy the URL of the GitHub repository, paste it into the command palette and confirm by pressing Enter.
+
+4. VS Code will automatically build the container and connect to it. This might take some time for the first run as it downloads the required Docker images and installs extensions.
+
+5. Once connected, you'll see "Dev Container: Python 3" in the bottom-left corner of the VS Code window, indicating that you are now working inside the container.
+
+6. You're all set! You can now run, develop, build, and test the project using the provided development environment.
+
+##### For Linux (and WSL):
+
+1. Make sure the Docker agent is running on your system.
+
+2. Clone the GitHub repository to your local machine.
+
+    ```bash
+    git clone <REPOSITORY_URL>
+    ```
+
+3. Navigate to the cloned project root and open the project in VS Code by running:
+
+    ```bash
+    cd <PROJECT_NAME>
+    code .
+    ```
+
+4. Upon opening the project in VS Code, a popup will appear prompting you to "Reopen in Container". Accept this prompt. If you do not see the popup, press `F1` to open the command palette and type "Dev Containers: Reopen in Container", then select it from the list.
 
 5. VS Code will automatically build the container and connect to it. This might take some time for the first run as it downloads the required Docker images and installs extensions.
 

@@ -3,7 +3,7 @@
 from pyflink.datastream import DataStream
 from pyflink.datastream.functions import MapFunction
 
-from .model import EntityVersion, ValidatedInput
+from flink_jobs.publish_state import EntityVersion, ValidatedInput
 
 
 class PrapareNotificationToIndexFunction(MapFunction):
