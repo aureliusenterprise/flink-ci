@@ -1,3 +1,5 @@
+from unittest import mock
+
 import pytest
 from m4i_atlas_core import (
     AtlasChangeMessage,
@@ -64,8 +66,8 @@ def event() -> KafkaNotification:
     )
 
 def test__publish_state_validate_input(
-        environment: StreamExecutionEnvironment,
-        event: KafkaNotification,
+    environment: StreamExecutionEnvironment,
+    event: KafkaNotification,
 ) -> None:
     """
     Test the validation stage of the PublishState.
@@ -75,7 +77,7 @@ def test__publish_state_validate_input(
     """
     data_stream = environment.from_collection([event.to_json()])
 
-    publish_state = PublishState(data_stream)
+    publish_state = PublishState(data_stream, mock.Mock())
 
     expected = [
         ValidatedInput(
@@ -90,7 +92,7 @@ def test__publish_state_validate_input(
     assert output == expected
 
 def test__publish_state_validate_input_with_invalid_input(
-        environment: StreamExecutionEnvironment,
+    environment: StreamExecutionEnvironment,
 ) -> None:
     """
     Test the validation stage of the `PublishState` flow with invalid input.
@@ -101,7 +103,7 @@ def test__publish_state_validate_input_with_invalid_input(
     invalid_input = '{"msgCreationTime": 1, "eventTime": 1, "atlasEntityAudit": {}}'
     data_stream = environment.from_collection([invalid_input])
 
-    publish_state = PublishState(data_stream)
+    publish_state = PublishState(data_stream, mock.Mock())
 
     output = list(publish_state.errors.execute_and_collect())
 

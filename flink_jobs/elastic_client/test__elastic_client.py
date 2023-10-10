@@ -15,7 +15,7 @@ def test__search_atlas_entity_query_format() -> None:
     arguments.
     """
     elasticsearch = mock.Mock(spec=Elasticsearch)
-    client = ElasticClient(elasticsearch, atlas_entities_index="test")
+    client = ElasticClient(lambda: elasticsearch, atlas_entities_index="test")
 
     expected_query = {
         "bool": {
@@ -58,7 +58,7 @@ def test__search_atlas_entity_with_result() -> None:
     the `get_previous_atlas_entity` method returns the expected document.
     """
     elasticsearch = mock.Mock(spec=Elasticsearch)
-    client = ElasticClient(elasticsearch, atlas_entities_index="test")
+    client = ElasticClient(lambda: elasticsearch, atlas_entities_index="test")
 
     expected_document = {"guid": "asd"}
 
@@ -114,7 +114,7 @@ def test__index_atlas_entity() -> None:
     when indexing an atlas entity in Elasticsearch.
     """
     elasticsearch = mock.Mock(spec=Elasticsearch)
-    client = ElasticClient(elasticsearch, atlas_entities_index="test")
+    client = ElasticClient(lambda: elasticsearch, atlas_entities_index="test")
 
     mock_entity = mock.Mock(spec=ElasticSearchEntity)
 

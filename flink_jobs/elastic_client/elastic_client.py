@@ -1,40 +1,47 @@
+from collections.abc import Callable
+from functools import cached_property
+
 from elasticsearch import ApiError, Elasticsearch
 
 from .errors import ElasticPersistingError, ElasticPreviousStateRetrieveError
 from .model import ElasticSearchEntity
 
+ElasticsearchFactory = Callable[[], Elasticsearch]
+
 
 class ElasticClient:
     """
-    ElasticClient provides queries for Aurelius Atlas-specific interaction with ElasticSearch.
+    A client to interface with ElasticSearch for Aurelius Atlas-specific operations.
 
-    This class enables the retrieval and indexing of atlas entities within an ElasticSearch index,
-    providing methods for fetching previous entity versions and indexing new entity data.
+    The ElasticClient facilitates the fetching and indexing of atlas entities within an
+    ElasticSearch index. This includes methods to fetch previous versions of atlas entities
+    and to index new entity data.
 
     Attributes
     ----------
-    elasticsearch : Elasticsearch
-        The ElasticSearch client instance used for executing queries.
+    elasticsearch_factory : ElasticsearchFactory
+        A factory method that returns an instance of Elasticsearch when invoked.
     atlas_entities_index : str
-        The name of the ElasticSearch index used for storing atlas entities.
+        The ElasticSearch index name where atlas entities are stored.
     """
 
     def __init__(
         self,
-        elasticsearch: Elasticsearch,
+        elasticsearch_factory: ElasticsearchFactory,
         atlas_entities_index: str = "atlas_entities_index",
     ) -> None:
         """
-        Initialize the ElasticClient object.
+        Initialize an instance of ElasticClient.
 
         Parameters
         ----------
-        elasticsearch : Elasticsearch
-            The ElasticSearch client instance to be used.
+        elasticsearch_factory : ElasticsearchFactory
+            A factory function that returns an Elasticsearch client instance.
         atlas_entities_index : str, optional
-            The name of the target ElasticSearch index, by default "atlas_entities_index".
+            The Elasticsearch index where atlas entities are stored.
+            Default is "atlas_entities_index".
         """
-        self.elasticsearch = elasticsearch
+        self.elasticsearch_factory = elasticsearch_factory
         self.atlas_entities_index = atlas_entities_index
 
     def get_previous_atlas_entity(
@@ -151,3 +158,18 @@ class ElasticClient:
             )
         except ApiError as err:
             raise ElasticPersistingError(doc_id) from err
+
+    @cached_property
+    def elasticsearch(self) -> Elasticsearch:
+        """
+        Provide a cached Elasticsearch client instance.
+
+        This method uses the `elasticsearch_factory` to get an Elasticsearch instance and caches
+        it for future use, ensuring that the same instance is reused across multiple calls.
+
+        Returns
+        -------
+        Elasticsearch
+            The Elasticsearch client instance.
+        """
+        return self.elasticsearch_factory()

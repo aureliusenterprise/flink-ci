@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import TypedDict
 
+from elasticsearch import Elasticsearch
 from pyflink.common.serialization import SimpleStringSchema
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.datastream.connectors.elasticsearch import (
@@ -10,7 +11,7 @@ from pyflink.datastream.connectors.elasticsearch import (
 )
 from pyflink.datastream.connectors.kafka import FlinkKafkaConsumer, FlinkKafkaProducer
 
-from flink_jobs import PublishState
+from flink_jobs import ElasticClient, PublishState
 
 
 class PublishStateConfig(TypedDict):
@@ -98,6 +99,14 @@ def main(config: PublishStateConfig) -> None:
         serialization_schema=SimpleStringSchema(),
     )
 
+    elastic_client = ElasticClient(lambda: Elasticsearch(
+        hosts=[config["elasticsearch_endpoint"]],
+        basic_auth=(
+            config["elasticsearch_username"],
+            config["elasticsearch_password"],
+        ),
+    ))
+
     # Set up the Elasticsearch sink
     elasticsearch_sink = (
         Elasticsearch7SinkBuilder()
@@ -109,7 +118,7 @@ def main(config: PublishStateConfig) -> None:
         .build()
     )
 
-    publish_state = PublishState(input_stream)
+    publish_state = PublishState(input_stream, elastic_client)
     publish_state.index_preparation.main.sink_to(elasticsearch_sink).name("Elasticsearch Sink")
     publish_state.errors.add_sink(error_sink).name("Error Sink")
 

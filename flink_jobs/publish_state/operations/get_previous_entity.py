@@ -1,5 +1,4 @@
-from elasticsearch import Elasticsearch
-from pyflink.datastream import DataStream, MapFunction, OutputTag, RuntimeContext
+from pyflink.datastream import DataStream, MapFunction, OutputTag
 
 from flink_jobs.elastic_client import (
     ElasticClient,
@@ -19,30 +18,21 @@ class GetPreviousEntityFunction(MapFunction):
 
     Attributes
     ----------
-    elasticsearch : Elasticsearch
-        The Elasticsearch client instance.
     elastic_client : ElasticClient
         Custom client for querying the desired Elasticsearch index.
     """
 
-    def open(self, runtime_context: RuntimeContext) -> None: # noqa: A003
+    def __init__(self, elastic_client: ElasticClient) -> None:
         """
-        Initialize the Elasticsearch connection.
+        Initialize the `GetPreviousEntityFunction` instance.
 
         Parameters
         ----------
-        runtime_context : RuntimeContext
-            The runtime context of the Flink job.
+        elastic_client : ElasticClient
+            Custom client for querying the desired Elasticsearch index.
         """
-        elasticsearch_host = runtime_context.get_job_parameter("ELASTICSEARCH_HOST", "http://localhost:9200")
-        self.elasticsearch = Elasticsearch(elasticsearch_host)
-
-        target_index = runtime_context.get_job_parameter("TARGET_INDEX", "atlas_entities_index")
-        self.elastic_client = ElasticClient(self.elasticsearch, target_index) # type: ignore
-
-    def close(self) -> None:
-        """Close the Elasticsearch connection."""
-        self.elasticsearch.close()
+        super().__init__()
+        self.elastic_client = elastic_client
 
     def map( # noqa: A003
         self,
@@ -106,7 +96,7 @@ class GetPreviousEntity:
         The union of elastic_errors and no_previous_entity_errors.
     """
 
-    def __init__(self, input_stream: DataStream) -> None:
+    def __init__(self, input_stream: DataStream, elastic_client: ElasticClient) -> None:
         """
         Initialize `GetPreviousEntity` with an input data stream.
 
@@ -116,10 +106,11 @@ class GetPreviousEntity:
             The input stream of validated notifications.
         """
         self.input_stream = input_stream
+        self.elastic_client = elastic_client
 
         self.main = (
             self.input_stream
-            .map(GetPreviousEntityFunction())
+            .map(GetPreviousEntityFunction(elastic_client))
             .name("previous_entity_lookup")
         )
 

@@ -1,5 +1,7 @@
 from pyflink.datastream import DataStream
 
+from flink_jobs.elastic_client import ElasticClient
+
 from .operations import GetPreviousEntity, PrepareNotificationToIndex, ValidateKafkaNotifications
 
 
@@ -30,6 +32,7 @@ class PublishState:
     def __init__(
         self,
         data_stream: DataStream,
+        elastic_client: ElasticClient,
     ) -> None:
         """
         Initialize the PublishState with an input Kafka notifications stream.
@@ -40,6 +43,7 @@ class PublishState:
             The input stream of Kafka notifications.
         """
         self.data_stream = data_stream
+        self.elastic_client = elastic_client
 
         # Initialize the validation stage for input Kafka notifications.
         self.input_validation = ValidateKafkaNotifications(self.data_stream)
@@ -47,6 +51,7 @@ class PublishState:
         # Initialize the stage for retrieving the previous entity versions from a database.
         self.previous_entity_retrieval = GetPreviousEntity(
             self.input_validation.main,
+            elastic_client,
         )
 
         # Initialize the stage for preparing the validated notifications for indexing.
