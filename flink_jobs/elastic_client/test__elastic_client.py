@@ -90,7 +90,7 @@ def test__search_atlas_entity_no_result() -> None:
     when the search query does not find any entity.
     """
     elasticsearch = mock.Mock(spec=Elasticsearch)
-    client = ElasticClient(elasticsearch, atlas_entities_index="test")
+    client = ElasticClient(lambda: elasticsearch, atlas_entities_index="test")
 
     mock_search_result = {
         "hits": {
