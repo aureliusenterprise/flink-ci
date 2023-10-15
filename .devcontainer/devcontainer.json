@@ -43,7 +43,8 @@
 	"forwardPorts": [
 		8081,
 		8082,
-		9200
+		9200,
+		5601
 	],
 	"portsAttributes": {
 		"8081": {
@@ -54,6 +55,9 @@
 		},
 		"9200": {
 			"label": "Elasticsearch API"
+		},
+		"5601": {
+			"label": "Kibana UI"
 		}
 	}
 }

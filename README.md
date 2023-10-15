@@ -90,3 +90,22 @@ To connect PyCharm to the Development Container, please [follow these instructio
 6. Once connected, you'll see "Dev Container: Python 3" in the bottom-left corner of the VS Code window, indicating that you are now working inside the container.
 
 7. You're all set! You can now run, develop, build, and test the project using the provided development environment.
+
+## Available User Interfaces
+- Kafka UI: http://localhost:8082
+- Flink Job Manager: http://localhost:8081
+- kibana: http://localhost:5601
+
+## How to deploy a flink job
+see the readme file in the jobs folder
+
+## How to make commits work
+git config --global user.email "you@example.com"
+git config --global user.name "Your Name"
+
+
+## pre-commit checks
+
+in a terminal you can get more information about a pre-commit failure by running
+
+pre-commit run
