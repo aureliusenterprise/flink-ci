@@ -1,4 +1,6 @@
+import logging
 import os
+import sys
 from pathlib import Path
 from typing import TypedDict
 
@@ -141,4 +143,6 @@ if __name__ == "__main__":
         "kafka_source_topic_name": os.environ["KAFKA_SOURCE_TOPIC_NAME"],
     }
 
+    logging.basicConfig(stream=sys.stdout,
+                        level=logging.INFO, format="%(message)s")
     main(config)

@@ -13,5 +13,7 @@ set -a
 source .env
 set +a
 
-to submit a job like e.g. Publish_state you can call
-python publish_state.py
+to submit a job like e.g. Publish_state you can call from the project root directory
+flink run -d -py jobs/publish_state.py
+
+the job is then accessible at http://localhost:8081/
