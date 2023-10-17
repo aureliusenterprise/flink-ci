@@ -100,8 +100,8 @@ To connect PyCharm to the Development Container, please [follow these instructio
 see the readme file in the jobs folder
 
 ## How to make commits work
-git config --global user.email "you@example.com"
-git config --global user.name "Your Name"
+git config --global user.email "andreas.wombacher@gmail.com"
+git config --global user.name "wombach"
 
 
 ## pre-commit checks
