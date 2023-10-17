@@ -19,7 +19,7 @@
 		"ghcr.io/devcontainers-contrib/features/poetry:2": {},
 		"ghcr.io/devcontainers-contrib/features/ruff:1": {}
 	},
-	"postCreateCommand": "bash postcreate.sh",
+	"postCreateCommand": "bash .taskmanager/postcreate.sh",
 	// Configure tool-specific properties.
 	"customizations": {
 		"vscode": {
