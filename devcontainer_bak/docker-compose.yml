@@ -1,0 +1,105 @@
+version: '3'
+
+services:
+  dev:
+    image: flink:1.17.0
+    environment:
+      FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
+      POETRY_VIRTUALENVS_IN_PROJECT: "true"
+    command: jobmanager
+    volumes:
+      - ..:/workspace:cached
+      - checkpoints:/tmp/flink-checkpoints-directory
+
+  pyflink-taskmanager:
+    image: flink:1.17.0
+    environment:
+      FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
+      POETRY_VIRTUALENVS_IN_PROJECT: "true"
+    command: taskmanager
+    depends_on:
+      - dev
+    volumes:
+      - ..:/workspace:cached
+      - checkpoints:/tmp/flink-checkpoints-directory
+    network_mode: service:dev
+    restart: unless-stopped
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.2.3
+    container_name: elasticsearch
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=docker-cluster
+      - discovery.type=single-node
+      - "ELASTICSEARCH_USERNAME=user"
+      - "ELASTICSEARCH_PASSWORD=password"
+      - ELASTICSEARCH_ENDPOINT=http://localhost:9200
+    volumes:
+      #- certs:/usr/share/elasticsearch/config/certs
+      - esdata:/usr/share/elasticsearch/data
+    network_mode: service:dev
+    restart: unless-stopped
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.2.3
+    container_name: kibana
+    environment:
+      - node.name=kibana
+      - ELASTICSEARCH_HOSTS=https://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=user
+      - ELASTICSEARCH_PASSWORD=password
+      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=/usr/share/elasticsearch/config/certs/ca/ca.crt
+    volumes:
+      #- certs:/usr/share/elasticsearch/config/certs
+      - kibanadata:/usr/share/kibana/data
+    network_mode: service:dev
+    restart: unless-stopped
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.2
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    network_mode: service:dev
+    restart: unless-stopped
+
+  kafka-broker:
+    image: confluentinc/cp-kafka:7.3.2
+    container_name: kafka-broker
+    depends_on:
+      - zookeeper
+    volumes:
+      - code:/code
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: localhost:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    network_mode: service:dev
+    restart: unless-stopped
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - kafka-broker
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=localhost:9092
+      - SERVER_PORT=8082
+    network_mode: service:dev
+    restart: unless-stopped
+
+
+
+volumes:
+  esdata:
+  checkpoints:
+  code:
+  #certs:
+  kibanadata:

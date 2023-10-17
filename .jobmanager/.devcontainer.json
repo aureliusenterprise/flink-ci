@@ -1,0 +1,63 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+	"name": "Aurelius Atlas - Flink",
+	// The 'service' property is the name of the service for the container that VS Code should
+	// use. Update this value and .devcontainer/docker-compose.yml to the real service name.
+	"dockerComposeFile": "../docker-compose.yml",
+	"service": "dev",
+	// The 'workspaceFolder' property is the path VS Code should open by default when
+	// connected. Corresponds to a volume mount in .devcontainer/docker-compose.yml
+	"workspaceFolder": "/workspace",
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	"features": {
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers/features/python:1": {
+			"version": "3.10",
+			"instalTools": false
+		},
+		"ghcr.io/devcontainers-contrib/features/poetry:2": {},
+		"ghcr.io/devcontainers-contrib/features/ruff:1": {}
+	},
+	"postCreateCommand": "bash postcreate.sh",
+	// Configure tool-specific properties.
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"editor.codeActionsOnSave": {
+					"source.fixAll": true
+				},
+				"python.analysis.enabled": true,
+				"python.analysis.autoSearchPaths": true,
+				"python.analysis.typeCheckingMode": "basic",
+				"python.testing.pytestEnabled": true
+			},
+			"extensions": [
+				"charliermarsh.ruff",
+				"yzhang.markdown-all-in-one",
+				"ms-azuretools.vscode-docker"
+			]
+		}
+	},
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [
+		8081,
+		8082,
+		9200,
+		5601
+	],
+	"portsAttributes": {
+		"8081": {
+			"label": "Flink UI"
+		},
+		"8082": {
+			"label": "Kafka UI"
+		},
+		"9200": {
+			"label": "Elasticsearch API"
+		},
+		"5601": {
+			"label": "Kibana UI"
+		}
+	}
+}
