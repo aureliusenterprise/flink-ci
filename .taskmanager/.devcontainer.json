@@ -38,7 +38,27 @@
 				"ms-azuretools.vscode-docker"
 			]
 		}
-	}
+	},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [
+		8081,
+		8082,
+		9200,
+		5601
+	],
+	"portsAttributes": {
+		"8081": {
+			"label": "Flink UI"
+		},
+		"8082": {
+			"label": "Kafka UI"
+		},
+		"9200": {
+			"label": "Elasticsearch API"
+		},
+		"5601": {
+			"label": "Kibana UI"
+		}
+	}
 
 }

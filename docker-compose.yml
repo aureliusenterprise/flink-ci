@@ -2,7 +2,7 @@ version: '3'
 
 services:
   dev:
-    image: flink:1.17.0
+    image: pyflink:0.1
     environment:
       FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
@@ -12,7 +12,7 @@ services:
       - checkpoints:/tmp/flink-checkpoints-directory
 
   pyflink-taskmanager:
-    image: flink:1.17.0
+    image: pyflink:0.1
     environment:
       FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
