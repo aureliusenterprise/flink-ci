@@ -12,7 +12,7 @@ services:
       - checkpoints:/tmp/flink-checkpoints-directory
 
   pyflink-taskmanager:
-    image: pyflink:0.1
+    image: flink:1.17.0
     environment:
       FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
