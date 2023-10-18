@@ -30,11 +30,25 @@ This section describes how to install the development container using Visual Stu
 
 Regardless of your operating system, please install the [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) in Visual Studio Code.
 
+Further, the WSL must use a Ubuntu 20.04 version, which has docker and docker compose installed.
+- installation of docker: https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-20-04
+- installation of docker compose: https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-20-04
+The provided config file for the dev container is NOT working on Ubuntu 22.04.
+
 ##### For Windows:
 
 1. Make sure the Docker Desktop is running, and open Visual Studio Code.
 
+1.a) If you are using WSL 2 on Windows, to ensure the WSL 2 back-end is enabled: Right-click on the Docker taskbar item and select **Settings**. Check **Use the WSL 2 based engine** and verify your distribution is enabled under **Resources > WSL Integration**.
+
+1.b) startup WSL and press `F1` to open command pallet, and type `Connect to WSL`. Select the right distribution and a new VS Code instance running in the WSL is opened. 
+
+1.c) In the menu on the left there is a button: Clone repository. Press the button and add the followign URL https://github.com/aureliusenterprise/flink-ci.git and press enter. Then open the repository. Now you have access to the code in the WSL with your VS Code.
+
+
 2. Press `F1` to open the command palette, and then type "Dev Containers: Clone Repository in Container Volume" and select it from the list. Alternatively, you can click on the green icon in the bottom-left corner of the VS Code window and select "Clone Repository in Container Volume" from the popup menu.
+
+2.a) enter the followign URL https://github.com/aureliusenterprise/flink-ci.git and press enter 
 
 3. Next, the command palette will ask you for the repository URL. Copy the URL of the GitHub repository, paste it into the command palette and confirm by pressing Enter.
 
