@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  dev:
+  pyflink-jobmanager:
     image: pyflink:0.1
     environment:
       FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
@@ -11,18 +11,18 @@ services:
       - ..:/workspace:cached
       - checkpoints:/tmp/flink-checkpoints-directory
 
-  pyflink-taskmanager:
+  dev:
     image: flink:1.17.0
     environment:
       FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
     command: taskmanager
     depends_on:
-      - dev
+      - pyflink-jobmanager
     volumes:
       - ..:/workspace:cached
       - checkpoints:/tmp/flink-checkpoints-directory
-    network_mode: service:dev
+    network_mode: service:pyflink-jobmanager
     restart: unless-stopped
 
   elasticsearch:
@@ -38,7 +38,7 @@ services:
     volumes:
       #- certs:/usr/share/elasticsearch/config/certs
       - esdata:/usr/share/elasticsearch/data
-    network_mode: service:dev
+    network_mode: service:pyflink-jobmanager
     restart: unless-stopped
 
   kibana:
@@ -53,7 +53,7 @@ services:
     volumes:
       #- certs:/usr/share/elasticsearch/config/certs
       - kibanadata:/usr/share/kibana/data
-    network_mode: service:dev
+    network_mode: service:pyflink-jobmanager
     restart: unless-stopped
 
   zookeeper:
@@ -62,7 +62,7 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    network_mode: service:dev
+    network_mode: service:pyflink-jobmanager
     restart: unless-stopped
 
   kafka-broker:
@@ -80,7 +80,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-    network_mode: service:dev
+    network_mode: service:pyflink-jobmanager
     restart: unless-stopped
 
   kafka-ui:
@@ -92,7 +92,7 @@ services:
       - KAFKA_CLUSTERS_0_NAME=local
       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=localhost:9092
       - SERVER_PORT=8082
-    network_mode: service:dev
+    network_mode: service:pyflink-jobmanager
     restart: unless-stopped
 
 
