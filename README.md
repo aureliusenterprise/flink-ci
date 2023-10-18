@@ -35,6 +35,11 @@ Further, the WSL must use a Ubuntu 20.04 version, which has docker and docker co
 - installation of docker compose: https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-20-04
 The provided config file for the dev container is NOT working on Ubuntu 22.04.
 
+For the docker compose file to work you have to build a docker image by running the followign commands
+docker build -t pyflink:0.1 -f ./docker/images/pyflink/Dockerfile .
+
+this command will create a docker image named pyflink tag 0.1
+
 ##### For Windows:
 
 1. Make sure the Docker Desktop is running, and open Visual Studio Code.
@@ -123,3 +128,26 @@ git config --global user.name "wombach"
 in a terminal you can get more information about a pre-commit failure by running
 
 pre-commit run
+
+## How to deploy flink jobs
+Flink jobs can be deployed from the dev container, which is the task manager. To do so open 
+a terminal on the dev container and start the python virtual environment
+source .venv/bin/activate
+
+if you are executing for the first time, make a copy of the sample env file
+cp .env_sample .env
+
+and potentially adkust the values.
+Next these environment variables have to be added to the terminal using the following commands
+set -a
+source jobs/.env
+set +a
+
+to submit a job like e.g. Publish_state you can call from the project root directory
+flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
+
+You will see a message that the job has been submitted. 
+
+You can also see the job is then UI of flink at 
+http://localhost:8081/
+
