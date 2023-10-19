@@ -19,6 +19,7 @@
 		"ghcr.io/devcontainers-contrib/features/poetry:2": {},
 		"ghcr.io/devcontainers-contrib/features/ruff:1": {}
 	},
+	"initializeCommand": "bash .devcontainer/initialize.sh",
 	"postCreateCommand": "bash .devcontainer/postcreate.sh",
 	// Configure tool-specific properties.
 	"customizations": {
