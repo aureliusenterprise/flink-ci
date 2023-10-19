@@ -70,3 +70,6 @@ venv.bak/
 
 # JAR files
 *.jar
+
+# Elasticsearch extension
+result.json

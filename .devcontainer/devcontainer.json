@@ -28,6 +28,7 @@
 				"editor.codeActionsOnSave": {
 					"source.fixAll": true
 				},
+				"elastic.showResultAsDocument": true,
 				"python.analysis.enabled": true,
 				"python.analysis.autoSearchPaths": true,
 				"python.analysis.typeCheckingMode": "basic",
@@ -36,7 +37,8 @@
 			"extensions": [
 				"charliermarsh.ruff",
 				"yzhang.markdown-all-in-one",
-				"ms-azuretools.vscode-docker"
+				"ms-azuretools.vscode-docker",
+				"ria.elastic"
 			]
 		}
 	},
