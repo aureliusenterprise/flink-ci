@@ -47,18 +47,18 @@ services:
     network_mode: service:dev
     restart: unless-stopped
 
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.2.3
-    container_name: kibana
-    environment:
-      - node.name=kibana
-      - ELASTICSEARCH_HOSTS=https://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=user
-      - ELASTICSEARCH_PASSWORD=password
-    volumes:
-      - kibanadata:/usr/share/kibana/data
-    network_mode: service:dev
-    restart: unless-stopped
+  # kibana:
+  #   image: docker.elastic.co/kibana/kibana:8.2.3
+  #   container_name: kibana
+  #   environment:
+  #     - node.name=kibana
+  #     - ELASTICSEARCH_HOSTS=https://elasticsearch:9200
+  #     - ELASTICSEARCH_USERNAME=user
+  #     - ELASTICSEARCH_PASSWORD=password
+  #   volumes:
+  #     - kibanadata:/usr/share/kibana/data
+  #   network_mode: service:dev
+  #   restart: unless-stopped
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.2
@@ -103,4 +103,4 @@ volumes:
   esdata:
   checkpoints:
   code:
-  kibanadata:
+  # kibanadata:
