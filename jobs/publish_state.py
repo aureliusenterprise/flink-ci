@@ -18,11 +18,8 @@ from pyflink.datastream.connectors.kafka import FlinkKafkaConsumer, FlinkKafkaPr
 from flink_jobs import ElasticClient, PublishState
 
 # responsible for debuging on the jobmanager
-try:
-    debugpy.listen(("localhost", 5678))
-    debugpy.wait_for_client(),  # blocks execution until client is attached
-except Exception:
-    logging.warning("already setup")
+debugpy.listen(("localhost", 5678))
+debugpy.wait_for_client()  # blocks execution until client is attached
 
 class PublishStateConfig(TypedDict):
     """
