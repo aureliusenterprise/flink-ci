@@ -1,9 +1,19 @@
+import debugpy
 from pyflink.datastream import DataStream
 
 from flink_jobs.elastic_client import ElasticClient
 
 from .operations import GetPreviousEntity, PrepareNotificationToIndex, ValidateKafkaNotifications
 
+# responsible to debug on the taskmanager
+try:
+    debugpy.listen(("localhost", 5678))
+    debugpy.debug_this_thread()
+    debugpy.trace_this_thread(True)
+    debugpy.wait_for_client()  # blocks execution until client is attached
+    print("debugpy set up!")
+except Exception:
+    print("debugpy went wront!")
 
 class PublishState:
     """

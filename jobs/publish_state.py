@@ -4,7 +4,9 @@ import sys
 from pathlib import Path
 from typing import TypedDict
 
+import debugpy
 from elasticsearch import Elasticsearch
+from pyflink.common import Types
 from pyflink.common.serialization import SimpleStringSchema
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.datastream.connectors.elasticsearch import (
@@ -15,6 +17,12 @@ from pyflink.datastream.connectors.kafka import FlinkKafkaConsumer, FlinkKafkaPr
 
 from flink_jobs import ElasticClient, PublishState
 
+# responsible for debuging on the jobmanager
+try:
+    debugpy.listen(("localhost", 5678))
+    debugpy.wait_for_client(),  # blocks execution until client is attached
+except Exception:
+    logging.warning("already setup")
 
 class PublishStateConfig(TypedDict):
     """
@@ -122,7 +130,7 @@ def main(config: PublishStateConfig) -> None:
 
     publish_state = PublishState(input_stream, elastic_client)
     publish_state.index_preparation.main.sink_to(elasticsearch_sink).name("Elasticsearch Sink")
-    publish_state.errors.add_sink(error_sink).name("Error Sink")
+    publish_state.errors.map(str, Types.STRING()).add_sink(error_sink).name("Error Sink")
 
     env.execute("Publish State")
 
