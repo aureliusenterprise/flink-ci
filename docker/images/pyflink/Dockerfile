@@ -10,4 +10,7 @@ RUN ln -s /usr/bin/python3.10 /usr/local/python/3.10.13/bin/python3.10
 # install PyFlink
 RUN pip3 install apache-flink==1.17.0
 
+# install basic linux network tools
+RUN apt-get install net-tools -y
+
 CMD []
