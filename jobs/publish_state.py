@@ -118,7 +118,7 @@ def main(config: PublishStateConfig) -> None:
     elasticsearch_sink = (
         Elasticsearch7SinkBuilder()
         .set_bulk_flush_max_actions(1)
-        .set_emitter(ElasticsearchEmitter.dynamic_index("name", "id"))
+        .set_emitter(ElasticsearchEmitter.static_index("name", "id"))
         .set_hosts([config["elasticsearch_endpoint"]])
         .set_connection_username(config["elasticsearch_username"])
         .set_connection_password(config["elasticsearch_password"])

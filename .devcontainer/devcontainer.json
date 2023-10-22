@@ -52,7 +52,9 @@
 		8082,
 		9200,
 		5601,
-		5678
+		5678,
+		5601,
+		3002
 	],
 	"portsAttributes": {
 		"8081": {
@@ -69,6 +71,12 @@
 		},
 		"5678": {
 			"label": "debugpy"
+		},
+		"5601": {
+			"label": "kibana"
+		},
+		"3002": {
+			"label": "enterprisesearch"
 		}
 	}
 

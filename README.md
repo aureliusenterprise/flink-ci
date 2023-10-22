@@ -157,4 +157,17 @@ source jobs/.env
 set +a
 flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
 
-{"hello":"world"}
+
+Create an index called “nyc-idx”:
+curl -XPUT "http://localhost:9200/nyc-idx"
+Create an index mapping called “popular-locations”:  curl -XPUT "http://localhost:9200/nyc-idx/_mapping/popular-locations" -d'
+{
+ "popular-locations" : {
+   "properties" : {
+      "cnt": {"type": "integer"},
+      "location": {"type": "geo_point"},
+      "time": {"type": "date"}
+    }
+ } 
+}'
+
