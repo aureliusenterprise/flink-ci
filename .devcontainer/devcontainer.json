@@ -17,8 +17,12 @@
 			"instalTools": false
 		},
 		"ghcr.io/devcontainers-contrib/features/poetry:2": {},
-		"ghcr.io/devcontainers-contrib/features/ruff:1": {}
+		"ghcr.io/devcontainers-contrib/features/ruff:1": {},
+		"ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+			"packages": "net-tools"
+		}
 	},
+	"initializeCommand": "bash .devcontainer/initialize.sh",
 	"postCreateCommand": "bash .devcontainer/postcreate.sh",
 	// Configure tool-specific properties.
 	"customizations": {
@@ -27,6 +31,7 @@
 				"editor.codeActionsOnSave": {
 					"source.fixAll": true
 				},
+				"elastic.showResultAsDocument": true,
 				"python.analysis.enabled": true,
 				"python.analysis.autoSearchPaths": true,
 				"python.analysis.typeCheckingMode": "basic",
@@ -35,7 +40,9 @@
 			"extensions": [
 				"charliermarsh.ruff",
 				"yzhang.markdown-all-in-one",
-				"ms-azuretools.vscode-docker"
+				"ms-azuretools.vscode-docker",
+				"ms-python.debugpy@prerelease",
+				"ria.elastic"
 			]
 		}
 	},
@@ -43,7 +50,9 @@
 	"forwardPorts": [
 		8081,
 		8082,
-		9200
+		9200,
+		5601,
+		5678
 	],
 	"portsAttributes": {
 		"8081": {
@@ -54,6 +63,13 @@
 		},
 		"9200": {
 			"label": "Elasticsearch API"
+		},
+		"5601": {
+			"label": "Kibana UI"
+		},
+		"5678": {
+			"label": "debugpy"
 		}
 	}
+
 }

@@ -30,11 +30,30 @@ This section describes how to install the development container using Visual Stu
 
 Regardless of your operating system, please install the [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) in Visual Studio Code.
 
+Further, the WSL must use a Ubuntu 20.04 version, which has docker and docker compose installed.
+- installation of docker: https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-20-04
+- installation of docker compose: https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-20-04
+The provided config file for the dev container is NOT working on Ubuntu 22.04.
+
+For the docker compose file to work you have to build a docker image by running the followign commands
+docker build -t pyflink:0.1 -f ./docker/images/pyflink/Dockerfile .
+
+this command will create a docker image named pyflink tag 0.1
+
 ##### For Windows:
 
 1. Make sure the Docker Desktop is running, and open Visual Studio Code.
 
+1.a) If you are using WSL 2 on Windows, to ensure the WSL 2 back-end is enabled: Right-click on the Docker taskbar item and select **Settings**. Check **Use the WSL 2 based engine** and verify your distribution is enabled under **Resources > WSL Integration**.
+
+1.b) startup WSL and press `F1` to open command pallet, and type `Connect to WSL`. Select the right distribution and a new VS Code instance running in the WSL is opened.
+
+1.c) In the menu on the left there is a button: Clone repository. Press the button and add the followign URL https://github.com/aureliusenterprise/flink-ci.git and press enter. Then open the repository. Now you have access to the code in the WSL with your VS Code.
+
+
 2. Press `F1` to open the command palette, and then type "Dev Containers: Clone Repository in Container Volume" and select it from the list. Alternatively, you can click on the green icon in the bottom-left corner of the VS Code window and select "Clone Repository in Container Volume" from the popup menu.
+
+2.a) enter the followign URL https://github.com/aureliusenterprise/flink-ci.git and press enter
 
 3. Next, the command palette will ask you for the repository URL. Copy the URL of the GitHub repository, paste it into the command palette and confirm by pressing Enter.
 
@@ -90,3 +109,52 @@ To connect PyCharm to the Development Container, please [follow these instructio
 6. Once connected, you'll see "Dev Container: Python 3" in the bottom-left corner of the VS Code window, indicating that you are now working inside the container.
 
 7. You're all set! You can now run, develop, build, and test the project using the provided development environment.
+
+## Available User Interfaces
+- Kafka UI: http://localhost:8082
+- Flink Job Manager: http://localhost:8081
+- kibana: http://localhost:5601
+
+## How to deploy a flink job
+see the readme file in the jobs folder
+
+## How to make commits work
+git config --global user.email "andreas.wombacher@gmail.com"
+git config --global user.name "wombach"
+
+
+## pre-commit checks
+
+in a terminal you can get more information about a pre-commit failure by running
+
+pre-commit run
+
+## How to deploy flink jobs
+Flink jobs can be deployed from the dev container, which is the task manager. To do so open
+a terminal on the dev container and start the python virtual environment
+source .venv/bin/activate
+
+if you are executing for the first time, make a copy of the sample env file
+cp .env_sample .env
+
+and potentially adkust the values.
+Next these environment variables have to be added to the terminal using the following commands
+set -a
+source jobs/.env
+set +a
+
+to submit a job like e.g. Publish_state you can call from the project root directory
+flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
+
+You will see a message that the job has been submitted.
+
+You can also see the job is then UI of flink at
+http://localhost:8081/
+
+source .venv/bin/activate
+set -a
+source jobs/.env
+set +a
+flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
+
+{"hello":"world"}

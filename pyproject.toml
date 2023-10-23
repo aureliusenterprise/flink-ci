@@ -13,6 +13,7 @@ dataclasses-json = "^0.6"
 kafka-python = "^2.0"
 elastic-transport = "^8.4"
 elasticsearch = "^8.9"
+debugpy = "^1.8.0"
 
 [tool.poetry.dev-dependencies]
 kafka = "^1.3"
@@ -44,6 +45,7 @@ ignore = [
     "D105",
     # Makes more sense to use `Parameters` in the main class instead of in the `__init__` .
     "D107",
+    "FBT003",
 ]
 line-length = 100
 target-version = "py310"

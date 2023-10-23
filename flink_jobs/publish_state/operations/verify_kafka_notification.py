@@ -1,5 +1,6 @@
 from typing import cast
 
+import debugpy
 from marshmallow import ValidationError
 from pyflink.datastream import DataStream, OutputTag
 from pyflink.datastream.functions import MapFunction
@@ -39,6 +40,7 @@ class ValidationFunction(MapFunction):
         try:
             # Deserialize the JSON string into a KafkaNotification object.
             # Using `cast` due to a known type hinting issue with schema.loads
+            debugpy.breakpoint()
             message_object = cast(
                 KafkaNotification,
                 KafkaNotification.schema().loads(value, many=False),
