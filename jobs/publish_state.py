@@ -17,9 +17,6 @@ from pyflink.datastream.connectors.kafka import FlinkKafkaConsumer, FlinkKafkaPr
 
 from flink_jobs import ElasticClient, PublishState
 
-# responsible for debuging on the jobmanager
-debugpy.listen(("localhost", 5678))
-debugpy.wait_for_client()  # blocks execution until client is attached
 
 class PublishStateConfig(TypedDict):
     """
@@ -147,6 +144,12 @@ if __name__ == "__main__":
         "kafka_producer_group_id": os.environ["KAFKA_PRODUCER_GROUP_ID"],
         "kafka_source_topic_name": os.environ["KAFKA_SOURCE_TOPIC_NAME"],
     }
+
+    # Set up the debugger and logger
+    try:
+        debugpy.listen(("localhost", 5678))
+    except RuntimeError:
+        logging.info("Tried to start the debugger, but it's already running!")
 
     logging.basicConfig(stream=sys.stdout,
                         level=logging.INFO, format="%(message)s")
