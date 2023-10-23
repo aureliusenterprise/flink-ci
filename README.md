@@ -148,6 +148,21 @@ You will see a message that the job has been submitted.
 You can also see the job is then UI of flink at
 http://localhost:8081/
 
+## How to debug flink jobs
+Flink jobs can be debugged from the dev container, which is the task manager. To do so open
+a terminal on the dev container and start the python virtual environment
+source .venv/bin/activate
+
+to submit a job in debug mode like e.g. Publish_state you can call from the project root directory
+flink run -d -py jobs/debug_publish_state.py -pyexec /workspace/.venv/bin/python
+
+You can debug the deployment of the job and you can debug the processing of the messages.
+So far it was not possible to define breakpoints from the VS Code, but it is necessary to add a line
+debugpy.breakpoint()
+into your python code BEFORE deploying it with the above command.
+
+Afterwards it is possible to step through the releavnt code with the editor.
+
 
 # left overs
 source .venv/bin/activate
