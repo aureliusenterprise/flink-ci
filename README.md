@@ -152,9 +152,6 @@ You can also see the job is then UI of flink at
 http://localhost:8081/
 
 source .venv/bin/activate
-set -a
-source jobs/.env
-set +a
 flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
 
 
@@ -168,6 +165,5 @@ Create an index mapping called “popular-locations”:  curl -XPUT "http://loca
       "location": {"type": "geo_point"},
       "time": {"type": "date"}
     }
- } 
+ }
 }'
-
