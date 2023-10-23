@@ -115,6 +115,12 @@ To connect PyCharm to the Development Container, please [follow these instructio
 - Flink Job Manager: http://localhost:8081
 - kibana: http://localhost:5601
 
+## How to run all unit tests?
+execute in a terminal the following command
+poetry run pytest
+
+poetry opens the correct virtual environment and then executes pytest.
+
 ## How to deploy a flink job
 see the readme file in the jobs folder
 
@@ -134,15 +140,6 @@ Flink jobs can be deployed from the dev container, which is the task manager. To
 a terminal on the dev container and start the python virtual environment
 source .venv/bin/activate
 
-if you are executing for the first time, make a copy of the sample env file
-cp .env_sample .env
-
-and potentially adkust the values.
-Next these environment variables have to be added to the terminal using the following commands
-set -a
-source jobs/.env
-set +a
-
 to submit a job like e.g. Publish_state you can call from the project root directory
 flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
 
@@ -151,9 +148,14 @@ You will see a message that the job has been submitted.
 You can also see the job is then UI of flink at
 http://localhost:8081/
 
+
+# left overs
 source .venv/bin/activate
 flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
 
+flink run -d -py jobs/debug_publish_state.py -pyexec /workspace/.venv/bin/python
+
+{"hello": "world"}
 
 Create an index called “nyc-idx”:
 curl -XPUT "http://localhost:9200/nyc-idx"

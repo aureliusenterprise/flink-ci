@@ -1,6 +1,3 @@
-import logging
-
-import debugpy
 from pyflink.datastream import DataStream
 
 from flink_jobs.elastic_client import ElasticClient
@@ -66,12 +63,3 @@ class PublishState:
         self.errors = self.input_validation.errors.union(
             self.previous_entity_retrieval.errors,
         )
-
-        # responsible to debug on the taskmanager
-        try:
-            debugpy.listen(("localhost", 5678))
-        except RuntimeError:
-            logging.info("Tried to start the debugger, but it's already running!")
-
-        debugpy.debug_this_thread()
-        debugpy.trace_this_thread(True)

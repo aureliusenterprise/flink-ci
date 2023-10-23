@@ -4,18 +4,17 @@ import sys
 from pathlib import Path
 from typing import TypedDict
 
-import debugpy
 from elasticsearch import Elasticsearch
 from pyflink.common import Types
 from pyflink.common.serialization import SimpleStringSchema
-from pyflink.datastream import StreamExecutionEnvironment
+from pyflink.datastream import DataStream, StreamExecutionEnvironment
 from pyflink.datastream.connectors.elasticsearch import (
     Elasticsearch7SinkBuilder,
     ElasticsearchEmitter,
 )
 from pyflink.datastream.connectors.kafka import FlinkKafkaConsumer, FlinkKafkaProducer
 
-from flink_jobs import ElasticClient, PublishState
+from flink_jobs.publish_state import ElasticClient, PublishState
 
 
 class PublishStateConfig(TypedDict):
@@ -54,7 +53,23 @@ class PublishStateConfig(TypedDict):
     kafka_producer_group_id: str
     kafka_source_topic_name: str
 
-def main(config: PublishStateConfig) -> None:
+class PublishStateJobClassLookup:
+    """A class that allows to switch off debugging."""
+
+    @staticmethod
+    def get_job_flow(input_stream: DataStream,
+        elastic_client: ElasticClient)-> PublishState:
+        """
+        Returns the corresponding Job object, which allows to publish the state.
+
+        Parameters
+        ----------
+        input_stream : DataStream
+            The input stream of Kafka notifications.
+        """  # noqa: D401
+        return PublishState(input_stream, elastic_client)
+
+def main(config: PublishStateConfig, klass:PublishStateJobClassLookup) -> None:
     """
     Execute the `PublishState` Flink job.
 
@@ -122,16 +137,16 @@ def main(config: PublishStateConfig) -> None:
         .build()
     )
 
-    publish_state = PublishState(input_stream, elastic_client)
+    publish_state = klass.get_job_flow(input_stream, elastic_client)
     publish_state.index_preparation.main.sink_to(elasticsearch_sink).name("Elasticsearch Sink")
     publish_state.errors.map(str, Types.STRING()).add_sink(error_sink).name("Error Sink")
 
     env.execute("Publish State")
 
+def setup(klass) -> None:  # noqa: ANN001
+    """Entry point of the script.
 
-if __name__ == "__main__":
-    """
-    Entry point of the script. Load configuration from environment variables and start the job.
+    Load configuration from environment variables and start the job.
     """
     config: PublishStateConfig = {
         "elasticsearch_endpoint": os.environ["ELASTICSEARCH_ENDPOINT"],
@@ -145,12 +160,9 @@ if __name__ == "__main__":
         "kafka_source_topic_name": os.environ["KAFKA_SOURCE_TOPIC_NAME"],
     }
 
-    # Set up the debugger and logger
-    try:
-        debugpy.listen(("localhost", 5678))
-    except RuntimeError:
-        logging.info("Tried to start the debugger, but it's already running!")
-
     logging.basicConfig(stream=sys.stdout,
                         level=logging.INFO, format="%(message)s")
-    main(config)
+    main(config,klass)
+
+if __name__ == "__main__":
+    setup(PublishStateJobClassLookup)
