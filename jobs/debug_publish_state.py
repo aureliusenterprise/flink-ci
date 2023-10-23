@@ -1,10 +1,9 @@
 import debugpy
+import publish_state
+from publish_state import PublishStateJobClassLookup
 from pyflink.datastream import DataStream
 
 from flink_jobs.publish_state import DebugPublishState, ElasticClient, PublishState
-
-from . import publish_state
-from .publish_state import PublishStateJobClassLookup
 
 
 class DebugPublishStateJobClassLookup(PublishStateJobClassLookup):
