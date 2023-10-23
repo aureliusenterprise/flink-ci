@@ -275,4 +275,4 @@ volumes:
   code:
   kibanadata:
   certs:
-  enterprisesearchdata:
+  #enterprisesearchdata:
