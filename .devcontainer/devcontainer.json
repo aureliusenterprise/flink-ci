@@ -19,7 +19,7 @@
 		"ghcr.io/devcontainers-contrib/features/poetry:2": {},
 		"ghcr.io/devcontainers-contrib/features/ruff:1": {},
 		"ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
-			"packages": "net-tools"
+			"packages": "gdb,net-tools"
 		}
 	},
 	"initializeCommand": "bash .devcontainer/initialize.sh",
