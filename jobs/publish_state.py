@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 from typing import TypedDict
 
-import debugpy
 from elasticsearch import Elasticsearch
 from pyflink.common import Types
 from pyflink.common.serialization import SimpleStringSchema
@@ -145,12 +144,7 @@ if __name__ == "__main__":
         "kafka_source_topic_name": os.environ["KAFKA_SOURCE_TOPIC_NAME"],
     }
 
-    # Set up the debugger and logger
-    try:
-        debugpy.listen(("localhost", 5678))
-    except RuntimeError:
-        logging.info("Tried to start the debugger, but it's already running!")
-
     logging.basicConfig(stream=sys.stdout,
                         level=logging.INFO, format="%(message)s")
+
     main(config)

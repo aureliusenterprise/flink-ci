@@ -10,7 +10,7 @@ repos:
         args: [--markdown-linebreak-ext=md]
 
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.327
+    rev: v1.1.333
     hooks:
       - id: pyright
 

@@ -134,27 +134,38 @@ Flink jobs can be deployed from the dev container, which is the task manager. To
 a terminal on the dev container and start the python virtual environment
 source .venv/bin/activate
 
-if you are executing for the first time, make a copy of the sample env file
-cp .env_sample .env
-
-and potentially adkust the values.
-Next these environment variables have to be added to the terminal using the following commands
-set -a
-source jobs/.env
-set +a
-
 to submit a job like e.g. Publish_state you can call from the project root directory
 flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
 
 You will see a message that the job has been submitted.
 
+Alternatively, you can call
+flink-run jobs/publish_state.py
+
 You can also see the job is then UI of flink at
 http://localhost:8081/
 
+## How to debug a flink job
+To start debugging the flink job, run the command
+flink-debug
+
+There is plenty of output from this command. In the last row of the output looks something like
+'connect in the vs code debugger to process id 1234'
+
+This is the relevant process id the vs code debugger has to debug to.
+To actually start the debugging open in vs code the debugger tab and
+press the green triangel in the top to start the debugger.
+The debugger will present a list of processes. Select the process
+with the process id mentined before, like e.g. 1234.
+
+If the connection was successful, you will see an orrange bar on the bottom of vs code.
+Now you can define breakpoints in vs code and step through the code.
+
+
+# backup - to be removed later on
 source .venv/bin/activate
-set -a
-source jobs/.env
-set +a
 flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
 
 {"hello":"world"}
+
+git commit -a --no-verify -m "message"
