@@ -152,9 +152,8 @@ You can also see the job is then UI of flink at
 http://localhost:8081/
 
 source .venv/bin/activate
-set -a
-source jobs/.env
-set +a
 flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
 
 {"hello":"world"}
+
+ps axf | grep pyflink.fn_execution.beam | grep -v grep | awk '{print "python -m debugpy --listen 5678 --pid " $1}'

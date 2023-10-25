@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# enable debugging
+command=`ps axf | grep pyflink.fn_execution.beam | grep -v grep | awk '{print "python -m debugpy --listen 5678 --pid " $1}'`
+eval $command
+
+ps axf | grep pyflink.fn_execution.beam | grep -v grep | awk '{print "connect in the vs code debugger to process id " $1}'

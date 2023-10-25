@@ -16,7 +16,7 @@ services:
       KAFKA_PRODUCER_GROUP_ID: "13"
       KAFKA_ERROR_TOPIC_NAME: "DEAD_LETTER_BOX"
       KAFKA_SOURCE_TOPIC_NAME: "ENRICHED_ENTITIES"
-    command: taskmanager
+    command: "taskmanager --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
     cap_add:
       - SYS_PTRACE
     volumes:
