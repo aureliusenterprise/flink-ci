@@ -95,6 +95,7 @@ services:
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=kibanapw
       - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+      - ENTERPRISESEARCH_HOST=http://localhost:3002
     network_mode: service:dev
     restart: unless-stopped
     # mem_limit: ${MEM_LIMIT}
@@ -108,7 +109,43 @@ services:
       timeout: 10s
       retries: 120
 
+  enterprisesearch:
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      kibana:
+        condition: service_healthy
+    image: docker.elastic.co/enterprise-search/enterprise-search:8.2.3
+    container_name: enterprisesearch
+    volumes:
+      - certs:/usr/share/enterprise-search/config/certs
+      - enterprisesearchdata:/usr/share/enterprise-search/config
+    environment:
+      - ENCRYPTION_KEYS=secret
+      - SERVERNAME=enterprisesearch
+      - secret_management.encryption_keys=[secret]
+      - allow_es_settings_modification=true
+      - elasticsearch.host=http://localhost:9200
+      - elasticsearch.username=elastic
+      - elasticsearch.password=elasticpw
+      - elasticsearch.ssl.enabled=false
+      - elasticsearch.ssl.certificate_authority=/usr/share/enterprise-search/config/certs/ca/ca.crt
+      - kibana.external_url=http://localhost:5601
+    network_mode: service:dev
+    restart: unless-stopped
+    #mem_limit: ${MEM_LIMIT}
+    healthcheck:
+      test:
+        [
+            "CMD-SHELL",
+            "curl -s -I http://localhost:3002 | grep -q 'HTTP/1.1 302 Found'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+
 volumes:
   esdata:
   kibanadata:
   certs:
+  enterprisesearchdata:
