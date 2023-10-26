@@ -18,7 +18,7 @@ Leverage the provided [development container](https://containers.dev/) to automa
 
 This project includes several services for end-to-end testing of Flink jobs. Each service's purpose and UI link (if available) are listed below:
 
-| Service            | Description                                                                             | UI Link                       |
+| Service            | Description                                                                             | UI                       |
 | ------------------ | --------------------------------------------------------------------------------------- | ----------------------------- |
 | Flink Job Manager  | Coordinates Flink jobs with a management dashboard.                                     | [Link](http://localhost:8081) |
 | Flink Task Manager | Executes Flink tasks; integrated with the dev environment for easier debugging.         |                               |
