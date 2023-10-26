@@ -22,9 +22,7 @@
 			"packages": "gdb,net-tools"
 		}
 	},
-	"initializeCommand": "bash .devcontainer/initialize.sh",
 	"postCreateCommand": "bash .devcontainer/postcreate.sh",
-	"runArgs": [ "--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined" ],
 	// Configure tool-specific properties.
 	"customizations": {
 		"vscode": {
