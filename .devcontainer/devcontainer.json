@@ -67,7 +67,8 @@
 			"label": "Kibana UI"
 		},
 		"5678": {
-			"label": "debugpy"
+			"label": "debugpy",
+			"onAutoForward": "ignore"
 		}
 	}
 
