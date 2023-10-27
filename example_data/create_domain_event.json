@@ -1,0 +1,42 @@
+{
+    "msgCreationTime": 1698326526605,
+    "eventTime": 1698326525104,
+    "atlasEntityAudit": {},
+    "kafkaNotification": {
+      "typeName": "m4i_data_domain",
+      "attributes": {
+        "archimateReference": [],
+        "replicatedTo": null,
+        "replicatedFrom": null,
+        "qualifiedName": "773431da-efb5-4f64-bf97-7c732b0da730",
+        "domainLead": [],
+        "name": "test",
+        "dataEntity": [],
+        "definition": null,
+        "source": [],
+        "typeAlias": null
+      },
+      "classifications": [],
+      "createTime": 1698326525104,
+      "createdBy": "atlas",
+      "customAttributes": null,
+      "guid": "b71f6dc3-42b7-4195-b610-503b7336e10c",
+      "homeId": null,
+      "isIncomplete": false,
+      "labels": [],
+      "meanings": [],
+      "provenanceType": null,
+      "proxy": null,
+      "relationshipAttributes": {
+        "ArchiMateReference": [],
+        "domainLead": [],
+        "dataEntity": [],
+        "source": [],
+        "meanings": []
+      },
+      "status": "ACTIVE",
+      "updateTime": 1698326525104,
+      "updatedBy": "atlas",
+      "version": 0
+    }
+  }

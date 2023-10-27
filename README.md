@@ -169,3 +169,9 @@ flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
 {"hello":"world"}
 
 git commit -a --no-verify -m "message"
+
+
+{"msgCreationTime": ['Missing data for required field.'],
+"eventTime": ['Missing data for required field.'],
+"atlasEntityAudit": ['Missing data for required field.'],
+"kafkaNotification": ['Missing data for required field.']}

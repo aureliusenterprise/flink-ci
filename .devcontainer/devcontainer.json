@@ -6,7 +6,7 @@
 	// use. Update this value and .devcontainer/docker-compose.yml to the real service name.
 	"dockerComposeFile": [
 		"docker-compose-dev.yml",
-		"docker-compose-elastic.yml",
+		"docker-compose-elastic7.yml",
 		"docker-compose-kafka.yml"
 	],
 	"service": "dev",
