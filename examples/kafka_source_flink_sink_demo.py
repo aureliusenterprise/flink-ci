@@ -2,7 +2,6 @@
 import json
 import logging
 import os
-import uuid
 from pathlib import Path
 from typing import TypedDict
 
@@ -17,6 +16,11 @@ from pyflink.datastream.connectors.elasticsearch import (
 )
 from pyflink.datastream.connectors.kafka import FlinkKafkaConsumer, FlinkKafkaProducer
 
+"""
+requries to run with elastic7
+in kibana in the dev tools perform the commands
+specified in queries/setup_index_pattern.es
+"""
 
 class PublishStateConfig(TypedDict):
     """
@@ -62,24 +66,6 @@ def log(data:dict) -> dict:
     """
     logging.error(data)
     return {"id": data["id"], "msg": json.dumps(data)}
-
-def mapping(data:str) -> dict:
-    """
-    map.
-
-    transform the incoming message.
-    """
-    data2=data
-    id_= str(uuid.uuid4())
-    return json.loads(json.dumps({"id":id_, "msg": data2}))
-
-def mapping2(data:str) -> dict:
-    """
-    map.
-
-    transform the incoming message.
-    """
-    return json.loads(json.dumps(data))
 
 def mapping3(data:str) -> dict:
     """

@@ -16,9 +16,6 @@ if __name__ == "__main__":
                                        {"name": "3", "value": 3}],
                                       type_info=row_type_info)
 
-    #     data_source
-    #     .map(lambda x: x, Types.STRING())
-
     data_source.map(str).map(logging.debug).print("hello world")
 
     res = env.execute_async("flink elestic connector")

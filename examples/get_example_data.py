@@ -1,3 +1,5 @@
+import logging
+
 from m4i_atlas_core import (
     AtlasChangeMessage,
     AtlasChangeMessageBody,
@@ -33,4 +35,4 @@ dd = KafkaNotification(
             ),
         ),
     )
-print(dd.to_json())  # noqa: T201
+logging.info(dd.to_json())
