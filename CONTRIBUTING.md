@@ -6,6 +6,18 @@ To ensure a smooth collaboration, we have outlined some guidelines to follow whe
 
 See the [installation](./README.md#installation) section of the README on how to get started with this repository.
 
+## Project Setup
+
+This project is set up with the following tools to support the development workflow:
+
+- Dependency management using [Poetry](https://python-poetry.org/)
+- Code linting and formatting using [Ruff](https://github.com/astral-sh/ruff)
+- Static type checking using [Pyright](https://github.com/microsoft/pyright)
+- Unit testing using [pytest](https://docs.pytest.org)
+- Pre-commit hooks using [pre-commit](https://pre-commit.com/)
+- A CI environment using [GitHub Actions](https://docs.github.com/en/actions)
+- A consistent development environment using a [development container](https://containers.dev)
+
 ## Branching
 
 Always create a new branch for your changes. This makes it easier to handle multiple contributions simultaneously.
