@@ -1,4 +1,6 @@
 
+import logging
+
 from pyflink.common import Types
 from pyflink.datastream import StreamExecutionEnvironment
 
@@ -17,6 +19,8 @@ if __name__ == "__main__":
     #     data_source
     #     .map(lambda x: x, Types.STRING())
 
-    data_source.print()
+    data_source.map(str).map(logging.debug).print("hello world")
 
-    env.execute()
+    res = env.execute_async("flink elestic connector")
+    logging.error("This is a debug message")
+    logging.error(res.get_job_execution_result().result())

@@ -76,7 +76,3 @@ PUT _index_template/foo-index-template
     "foo-custom-meta-field": "More arbitrary metadata"
   }
 }
-
-# create a datastream
-PUT _data_stream/foo
-{[foo][_doc][5], doc_as_upsert[false], doc[index {[null][_doc][null], source[{"name":"ada","id":"5"}]}], upsert[index {[null][_doc][null], source[{"name":"ada","id":"5"}]}], scripted_upsert[false], detect_noop[true]}

@@ -169,6 +169,10 @@ flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
 source .venv/bin/activate
 flink run -d -py experiment/elastic_test.py -pyexec /workspace/.venv/bin/python
 
+source .venv/bin/activate
+flink run -d -py experiment/demo3.py -pyexec /workspace/.venv/bin/python
+
+
 {"hello":"world"}
 
 git commit -a --no-verify -m "message"
