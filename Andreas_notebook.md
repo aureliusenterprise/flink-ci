@@ -9,15 +9,21 @@ source .venv/bin/activate
 pre-commit run
 
 # How to deploy flink jobs
+```bash
 source .venv/bin/activate
 flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
+```
 
+```bash
 source .venv/bin/activate
-flink run -d -py experiment/elastic_test.py -pyexec /workspace/.venv/bin/python
+flink run -d -py examples/elastic_test.py -pyexec /workspace/.venv/bin/python
+```
 
+```bash
 source .venv/bin/activate
-flink run -d -py experiment/demo3.py -pyexec /workspace/.venv/bin/python
-
+flink run -d -py examples/kafka_source_flink_sink_demo.py -pyexec /workspace/.venv/bin/python
+```
+example message {"name":"anwo", "id":"15"}
 
 # How to debug a flink job
 To start debugging the flink job, run the command

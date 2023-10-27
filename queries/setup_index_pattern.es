@@ -39,7 +39,7 @@ PUT _component_template/foo-mappings
           "type": "date",
           "format": "date_optional_time||epoch_millis"
         },
-        "id": { "type": "keyword" },
+        "id": { "type": "integer" },
         "msg": { "type": "keyword" }
       }
     }
