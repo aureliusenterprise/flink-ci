@@ -17,7 +17,7 @@ PUT foo
 {
   "mappings": {
       "properties": {
-        "id": { "type": "keyword" }
+        "id": { "type": "keyword" },
         "name": { "type": "keyword" }
       }
   }
