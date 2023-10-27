@@ -30,8 +30,6 @@ PUT _ilm/policy/foo-lifecycle-policy
   }
 }
 
-# Create component template
-# Creates a component template for mappings
 PUT _component_template/foo-mappings
 {
   "template": {
@@ -42,7 +40,7 @@ PUT _component_template/foo-mappings
           "format": "date_optional_time||epoch_millis"
         },
         "id": { "type": "keyword" },
-        "name": { "type": "keyword" }
+        "msg": { "type": "keyword" }
       }
     }
   },
@@ -52,7 +50,6 @@ PUT _component_template/foo-mappings
   }
 }
 
-# Creates a component template for index settings
 PUT _component_template/foo-settings
 {
   "template": {
