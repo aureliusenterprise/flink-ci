@@ -108,7 +108,7 @@ def test_get_entity_process_valid_input_event(
     """
     data_stream = environment.from_collection([event.to_json()])
 
-    with patch("tasks.get_entity.get_entity.get_entity_by_guid", return_value=entity):
+    with patch("flink_tasks.get_entity.get_entity.get_entity_by_guid", return_value=entity):
         get_entity = GetEntity(
             data_stream=data_stream,
             keycloak_factory=keycloak_factory,
@@ -237,7 +237,7 @@ def test_get_entity_handle_http_error_during_entity_lookup(
     """
     data_stream = environment.from_collection([event.to_json()])
 
-    with patch("tasks.get_entity.get_entity.get_entity_by_guid", side_effect=HTTPError()):
+    with patch("flink_tasks.get_entity.get_entity.get_entity_by_guid", side_effect=HTTPError()):
         get_entity = GetEntity(
             data_stream=data_stream,
             keycloak_factory=keycloak_factory,
@@ -270,7 +270,7 @@ def test_get_entity_handle_keycloak_error_during_entity_lookup(
     data_stream = environment.from_collection([event.to_json()])
 
     with patch(
-        "tasks.get_entity.get_entity.GetEntityFunction.access_token",
+        "flink_tasks.get_entity.get_entity.GetEntityFunction.access_token",
         new_callable=PropertyMock,
     ) as mock:
         mock.side_effect = (KeycloakError("Mock Error", 404, b""),)
