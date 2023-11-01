@@ -1,15 +1,18 @@
 import asyncio
 from collections.abc import Callable
+from typing import cast
 
 from aiohttp.web import HTTPError
 from keycloak import KeycloakError, KeycloakOpenID
 from m4i_atlas_core import AtlasChangeMessage, get_entity_by_guid
+from marshmallow import ValidationError
 from pyflink.datastream import DataStream, OutputTag
-from pyflink.datastream.functions import MapFunction
+from pyflink.datastream.functions import MapFunction, RuntimeContext
 
 # Define output tags for errors that can occur during processing.
-NO_ENTITY_ERROR_TAG = OutputTag("no_entity")
 ENTITY_LOOKUP_ERROR_TAG = OutputTag("entity_lookup_error")
+NO_ENTITY_ERROR_TAG = OutputTag("no_entity")
+SCHEMA_ERROR_TAG = OutputTag("schema_error")
 
 # A type alias for a factory function that produces instances of KeycloakOpenID.
 KeycloakFactory = Callable[[], KeycloakOpenID]
@@ -46,7 +49,7 @@ class GetEntityFunction(MapFunction):
         self.credentials = credentials
         self.keycloak_factory = keycloak_factory
 
-    def open(self) -> None:  # noqa: A003
+    def open(self, runtime_context: RuntimeContext) -> None:  # noqa: A003, ARG002
         """Initialize the keycloak instance using the provided keycloak factory."""
         self.keycloak = self.keycloak_factory()
 
@@ -66,7 +69,16 @@ class GetEntityFunction(MapFunction):
         tuple[OutputTag, Exception]
             If there's an error during processing.
         """
-        change_message = AtlasChangeMessage.from_json(value)
+        try:
+            # Deserialize the JSON string into a KafkaNotification object.
+            # Using `cast` due to a known type hinting issue with schema.loads
+            change_message = cast(
+                AtlasChangeMessage,
+                AtlasChangeMessage.schema().loads(value, many=False),
+            )
+        except ValidationError as e:
+            return SCHEMA_ERROR_TAG, e
+
         entity = change_message.message.entity
 
         if entity is None:
@@ -81,7 +93,7 @@ class GetEntityFunction(MapFunction):
                 ),
             )
         except (HTTPError, KeycloakError) as e:
-            return ENTITY_LOOKUP_ERROR_TAG, e
+            return ENTITY_LOOKUP_ERROR_TAG, RuntimeError(str(e))
 
         change_message.message.entity = entity_details
 
@@ -149,4 +161,6 @@ class GetEntity:
             "no_entity_errors",
         )
 
-        self.errors = self.entity_lookup_errors.union(self.no_entity_errors)
+        self.schema_errors = self.main.get_side_output(SCHEMA_ERROR_TAG).name("schema_errors")
+
+        self.errors = self.entity_lookup_errors.union(self.no_entity_errors, self.schema_errors)
