@@ -14,7 +14,7 @@ from pyflink.datastream.connectors.elasticsearch import (
 )
 from pyflink.datastream.connectors.kafka import FlinkKafkaConsumer, FlinkKafkaProducer
 
-from tasks import ElasticClient, PublishState
+from flink_tasks import ElasticClient, PublishState
 
 
 class PublishStateConfig(TypedDict):

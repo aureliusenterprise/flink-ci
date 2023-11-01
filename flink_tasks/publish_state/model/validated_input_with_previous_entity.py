@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from dataclasses_json import LetterCase, dataclass_json
 
-from tasks.elastic_client import ElasticSearchEntity
+from flink_tasks.elastic_client import ElasticSearchEntity
 
 from .validated_input import ValidatedInput
 

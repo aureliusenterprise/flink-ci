@@ -1,6 +1,6 @@
 from pyflink.datastream import DataStream
 
-from tasks.elastic_client import ElasticClient
+from flink_tasks.elastic_client import ElasticClient
 
 from .operations import GetPreviousEntity, PrepareNotificationToIndex, ValidateKafkaNotifications
 
