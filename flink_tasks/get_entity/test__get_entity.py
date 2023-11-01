@@ -271,10 +271,8 @@ def test_get_entity_handle_keycloak_error_during_entity_lookup(
 
     with patch(
         "flink_tasks.get_entity.get_entity.GetEntityFunction.access_token",
-        new_callable=PropertyMock,
-    ) as mock:
-        mock.side_effect = (KeycloakError("Mock Error", 404, b""),)
-
+        new=PropertyMock(side_effect=KeycloakError("Mock Error", 404, b"")),
+    ):
         get_entity = GetEntity(
             data_stream=data_stream,
             keycloak_factory=keycloak_factory,
