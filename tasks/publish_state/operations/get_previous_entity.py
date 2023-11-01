@@ -1,10 +1,10 @@
 from pyflink.datastream import DataStream, MapFunction, OutputTag
 
-from flink_jobs.elastic_client import (
+from tasks.elastic_client import (
     ElasticClient,
     ElasticPreviousStateRetrieveError,
 )
-from flink_jobs.publish_state import ValidatedInput, ValidatedInputWithPreviousEntity
+from tasks.publish_state import ValidatedInput, ValidatedInputWithPreviousEntity
 
 ELASTICSEARCH_ERROR = OutputTag("elastic_error")
 NO_PREVIOUS_ENTITY_ERROR = OutputTag("no_previous_entity")
