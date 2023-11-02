@@ -104,14 +104,13 @@ class DetermineChange:
 
         self.determine_change_errors = self.changes.get_side_output(
             DETERMINE_CHANGE_ERROR_TAG,
-        ).name(
-            "determine_change_errors",
-        )
+        ).name("determine_change_errors")
 
         self.main = self.changes.flat_map(
             lambda messages: (message for message in messages),
         ).name("determine_change_results")
 
         self.errors = self.validation_erorrs.union(
-            self.unknown_event_types, self.determine_change_errors,
+            self.unknown_event_types,
+            self.determine_change_errors,
         )
