@@ -33,6 +33,8 @@ class GetEntityFunction(MapFunction):
         A tuple containing the client_id and client_secret for authentication.
     keycloak : KeycloakOpenID
         The Keycloak instance used for token management.
+    loop : asyncio.AbstractEventLoop
+        The event loop used for asynchronous tasks.
     """
 
     def __init__(self, keycloak_factory: KeycloakFactory, credentials: tuple[str, str]) -> None:
@@ -52,6 +54,11 @@ class GetEntityFunction(MapFunction):
     def open(self, runtime_context: RuntimeContext) -> None:  # noqa: A003, ARG002
         """Initialize the keycloak instance using the provided keycloak factory."""
         self.keycloak = self.keycloak_factory()
+        self.loop = asyncio.new_event_loop()
+
+    def close(self) -> None:
+        """Close the event loop."""
+        self.loop.close()
 
     def map(self, value: str) -> AtlasChangeMessage | tuple[OutputTag, Exception]:  # noqa: A003
         """
@@ -85,7 +92,7 @@ class GetEntityFunction(MapFunction):
             return NO_ENTITY_ERROR_TAG, ValueError("No entity found in message.")
 
         try:
-            entity_details = asyncio.run(
+            entity_details = self.loop.run_until_complete(
                 get_entity_by_guid(
                     guid=entity.guid,
                     access_token=self.access_token,
