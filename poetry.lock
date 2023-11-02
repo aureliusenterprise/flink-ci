@@ -1054,7 +1054,7 @@ dev = ["autodocsumm", "m2r2", "pytest", "pytest-asyncio", "pytest-cov", "recommo
 type = "git"
 url = "https://github.com/aureliusenterprise/m4i_atlas_core.git"
 reference = "HEAD"
-resolved_reference = "859e7e9d3cfb3403b16bc7c216099ead61c43cd8"
+resolved_reference = "bf24e6097c27df3b532ce2701cf247472e6505af"
 
 [[package]]
 name = "marshmallow"
