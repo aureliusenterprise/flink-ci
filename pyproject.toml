@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "flink-jobs"
+name = "flink-tasks"
 version = "0.1.0"
 description = ""
 authors = ["Aurelius Enterprise <info@aureliusenterprise.com>"]
