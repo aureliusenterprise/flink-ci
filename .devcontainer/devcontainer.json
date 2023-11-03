@@ -7,7 +7,8 @@
 	"dockerComposeFile": [
 		"docker-compose-dev.yml",
 		"docker-compose-elastic7.yml",
-		"docker-compose-kafka.yml"
+		"docker-compose-kafka.yml",
+		//"docker-compose-atlas.yml"
 	],
 	"service": "dev",
 	// The 'workspaceFolder' property is the path VS Code should open by default when
@@ -55,7 +56,8 @@
 		8082,
 		9200,
 		5601,
-		5678
+		5678,
+		21000
 	],
 	"portsAttributes": {
 		"8081": {
@@ -73,6 +75,9 @@
 		"5678": {
 			"label": "debugpy",
 			"onAutoForward": "ignore"
+		},
+		"21000": {
+			"label": "Apache Atlas UI"
 		}
 	}
 

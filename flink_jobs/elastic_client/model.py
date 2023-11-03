@@ -1,6 +1,9 @@
 from typing import TypedDict
 
 
+# this class is never instantiated. It is always dealt with as an input.
+# I think it is a good class to be used, but it is used not in the context of publish state,
+# but as a document which is sent to enterprise search and not elasticsearch!
 class ElasticSearchEntity(TypedDict):
     """Represents an entity in ElasticSearch."""
 

@@ -37,9 +37,10 @@ class KafkaNotification(DataClassJsonMixin):
         Defaults to None.
     """
 
-    msg_creation_time: int
-    event_time: int
+    msg_creation_time: int #  msg_creation_time = kafka_notification.msg_creation_time
+    event_time: int  # event_time = kafka_notification.event_time
     atlas_entity_audit: dict
     kafka_notification: AtlasChangeMessage
-    atlas_entity: Entity | None = None
-    previous_version: ElasticSearchEntity | None = None
+    atlas_entity: Entity | None = None  # atlas_entity = kafka_notification.atlas_entity
+    previous_version: ElasticSearchEntity | None = None  # this is wrong
+    # why are the supertypes not in anymore?

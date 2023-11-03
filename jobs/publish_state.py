@@ -8,9 +8,11 @@ from elasticsearch import Elasticsearch
 from pyflink.common import Types
 from pyflink.common.serialization import SimpleStringSchema
 from pyflink.datastream import StreamExecutionEnvironment
+from pyflink.datastream.connectors import DeliveryGuarantee
 from pyflink.datastream.connectors.elasticsearch import (
     Elasticsearch7SinkBuilder,
     ElasticsearchEmitter,
+    FlushBackoffType,
 )
 from pyflink.datastream.connectors.kafka import FlinkKafkaConsumer, FlinkKafkaProducer
 
@@ -29,6 +31,8 @@ class PublishStateConfig(TypedDict):
         The username for Elasticsearch authentication.
     elasticsearch_password: str
         The password for Elasticsearch authentication.
+    elasticsearch_index: str
+        The name of the index, where the state of the documents should be maintained.
     kafka_bootstrap_server_hostname: str
         The hostname of the Kafka bootstrap server.
     kafka_bootstrap_server_port: str
@@ -46,6 +50,7 @@ class PublishStateConfig(TypedDict):
     elasticsearch_endpoint: str
     elasticsearch_username: str
     elasticsearch_password: str
+    elasticsearch_index: str
     kafka_bootstrap_server_hostname: str
     kafka_bootstrap_server_port: str
     kafka_consumer_group_id: str
@@ -113,11 +118,18 @@ def main(config: PublishStateConfig) -> None:
     # Set up the Elasticsearch sink
     elasticsearch_sink = (
         Elasticsearch7SinkBuilder()
-        .set_bulk_flush_max_actions(1)
-        .set_emitter(ElasticsearchEmitter.dynamic_index("name", "id"))
+        .set_emitter(ElasticsearchEmitter.static_index(config["elasticsearch_index"], "id")) \
         .set_hosts([config["elasticsearch_endpoint"]])
+        .set_delivery_guarantee(DeliveryGuarantee.AT_LEAST_ONCE) \
+        .set_bulk_flush_max_actions(1) \
+        .set_bulk_flush_max_size_mb(2) \
+        .set_bulk_flush_interval(1000) \
+        .set_bulk_flush_backoff_strategy(FlushBackoffType.CONSTANT, 3, 3000) \
         .set_connection_username(config["elasticsearch_username"])
         .set_connection_password(config["elasticsearch_password"])
+        .set_connection_request_timeout(30000) \
+        .set_connection_timeout(31000) \
+        .set_socket_timeout(32000) \
         .build()
     )
 
@@ -136,6 +148,7 @@ if __name__ == "__main__":
         "elasticsearch_endpoint": os.environ["ELASTICSEARCH_ENDPOINT"],
         "elasticsearch_username": os.environ["ELASTICSEARCH_USERNAME"],
         "elasticsearch_password": os.environ["ELASTICSEARCH_PASSWORD"],
+        "elasticsearch_index": os.environ["ELASTICSEARCH_INDEX"],
         "kafka_bootstrap_server_hostname": os.environ["KAFKA_BOOTSTRAP_SERVER_HOSTNAME"],
         "kafka_bootstrap_server_port": os.environ["KAFKA_BOOTSTRAP_SERVER_PORT"],
         "kafka_consumer_group_id": os.environ["KAFKA_CONSUMER_GROUP_ID"],

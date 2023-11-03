@@ -6,7 +6,8 @@ from pyflink.datastream.functions import MapFunction
 from flink_jobs.publish_state import EntityVersion, ValidatedInput
 
 
-class PrapareNotificationToIndexFunction(MapFunction):
+# There is a typo in the name
+class PrepareNotificationToIndexFunction(MapFunction):
     """
     A custom `MapFunction` to prepare notifications for indexing.
 
@@ -45,7 +46,7 @@ class PrepareNotificationToIndex:
     A class that sets up the Flink data stream for preparing notifications for indexing.
 
     This class initializes the data stream and applies the transformation logic using
-    `PrapareNotificationToIndexFunction` to produce messages ready for indexing.
+    `e` to produce messages ready for indexing.
 
     Attributes
     ----------
@@ -68,6 +69,6 @@ class PrepareNotificationToIndex:
 
         self.main = (
             self.input_stream
-            .map(PrapareNotificationToIndexFunction())
+            .map(PrepareNotificationToIndexFunction())
             .name("index_preparation")
         )

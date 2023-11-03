@@ -106,6 +106,7 @@ class ElasticClient:
             raise ElasticPreviousStateRetrieveError(
                 entity_guid,
                 creation_time,
+                "publish_state",
             ) from err
 
         if result["hits"]["total"]["value"] == 0:
@@ -113,12 +114,17 @@ class ElasticClient:
 
         return result["hits"]["hits"][0]["_source"]["body"]
 
+    # there should be two separate instances: one creating the document and one writing the document
+    # since writing the document is done in the kafka sink, the main functionality should be to
+    # provide the key and the document to be published it is especially important that the document
+    # created is a flat json document with strings as values the key should also be a string
+    # where do we put the initialization for this index?
     def index_atlas_entity(
         self,
         entity_guid: str,
         msg_creation_time: int,
         event_time: int,
-        atlas_entity: ElasticSearchEntity,
+        atlas_entity: ElasticSearchEntity,  # this is wrong. This should be a KafkaNotification entity  # noqa: E501
     ) -> None:
         """
         Index an atlas entity in Elasticsearch.
@@ -157,7 +163,7 @@ class ElasticClient:
                 document=doc,
             )
         except ApiError as err:
-            raise ElasticPersistingError(doc_id) from err
+            raise ElasticPersistingError(doc_id, "publish_state") from err
 
     @cached_property
     def elasticsearch(self) -> Elasticsearch:
