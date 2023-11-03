@@ -27,6 +27,7 @@
 			"packages": "gdb,net-tools"
 		}
 	},
+	"initializeCommand": "bash .devcontainer/initialize.sh",
 	"postCreateCommand": "bash .devcontainer/postcreate.sh",
 	// Configure tool-specific properties.
 	"customizations": {

@@ -4,7 +4,7 @@ from marshmallow import ValidationError
 from pyflink.datastream import DataStream, OutputTag
 from pyflink.datastream.functions import MapFunction
 
-from flink_jobs.publish_state import KafkaNotification, ValidatedInput
+from flink_tasks.publish_state import KafkaNotification, ValidatedInput
 
 SCHEMA_ERROR_TAG = OutputTag("dead_letter")
 NO_ENTITY_ERROR_TAG = OutputTag("no_entity")

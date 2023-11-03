@@ -61,7 +61,6 @@ services:
       - discovery.type=single-node
       - ELASTIC_PASSWORD=elasticpw
       - bootstrap.memory_lock=true
-    # mem_limit: 1073741824
     network_mode: service:dev
     restart: unless-stopped
     ulimits:
@@ -97,7 +96,6 @@ services:
       - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
     network_mode: service:dev
     restart: unless-stopped
-    # mem_limit: ${MEM_LIMIT}
     healthcheck:
       test:
         [

@@ -2,54 +2,7 @@ version: '3'
 
 services:
 
-  # setup:
-  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
-  #   container_name: es-setup
-  #   volumes:
-  #     - certs7:/usr/share/elasticsearch/config/certs
-  #   network_mode: service:dev
-  #   user: "0"
-  #   command: >
-  #     bash -c '
-  #       if [ ! -f config/certs/ca.zip ]; then
-  #         echo "Creating CA";
-  #         bin/elasticsearch-certutil ca --silent --pem -out config/certs/ca.zip;
-  #         unzip config/certs/ca.zip -d config/certs;
-  #       fi;
-  #       if [ ! -f config/certs/certs.zip ]; then
-  #         echo "Creating certs";
-  #         echo -ne \
-  #         "instances:\n"\
-  #         "  - name: elasticsearch\n"\
-  #         "    dns:\n"\
-  #         "      - elasticsearch\n"\
-  #         "      - localhost\n"\
-  #         "    ip:\n"\
-  #         "      - 127.0.0.1\n"\
-  #         > config/certs/instances.yml;
-  #         bin/elasticsearch-certutil cert --silent --pem -out config/certs/certs.zip --in config/certs/instances.yml --ca-cert config/certs/ca/ca.crt --ca-key config/certs/ca/ca.key;
-  #         unzip config/certs/certs.zip -d config/certs;
-  #       fi;
-  #       echo "Setting file permissions"
-  #       chown -R root:root config/certs;
-  #       find . -type d -exec chmod 750 \{\} \;;
-  #       find . -type f -exec chmod 640 \{\} \;;
-  #       echo "Waiting for Elasticsearch availability";
-  #       until curl -s http://localhost:9200; do sleep 30; done;
-  #       echo "Setting kibana_system password";
-  #       until curl -s -X POST -u elastic:elasticpw -H "Content-Type: application/json" http://localhost:9200/_security/user/kibana_system/_password -d "{\"password\":\"kibanapw\"}" | grep -q "^{}"; do sleep 10; done;
-  #       echo "All done!";
-  #     '
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "[ -f config/certs/elasticsearch/elasticsearch.crt ]"]
-  #     interval: 1s
-  #     timeout: 5s
-  #     retries: 120
-
   elasticsearch:
-    # depends_on:
-    #   setup:
-    #     condition: service_healthy
     image: docker.elastic.co/elasticsearch/elasticsearch:7.15.0
     container_name: elasticsearch
     volumes:
@@ -61,7 +14,6 @@ services:
       - discovery.type=single-node
       - ELASTIC_PASSWORD=elasticpw
       - bootstrap.memory_lock=true
-    # mem_limit: 1073741824
     network_mode: service:dev
     restart: unless-stopped
     ulimits:
@@ -96,7 +48,6 @@ services:
       - ELASTICSEARCH_PASSWORD=kibanapw
     network_mode: service:dev
     restart: unless-stopped
-    # mem_limit: ${MEM_LIMIT}
     healthcheck:
       test:
         [

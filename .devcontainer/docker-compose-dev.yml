@@ -25,7 +25,9 @@ services:
       - checkpoints:/tmp/flink-checkpoints-directory
 
   pyflink-jobmanager:
-    image: pyflink:0.1
+    build:
+      context: .
+      dockerfile: ../docker/images/pyflink/Dockerfile
     environment:
       FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
