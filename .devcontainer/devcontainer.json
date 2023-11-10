@@ -55,10 +55,11 @@
 	"forwardPorts": [
 		8081,
 		8082,
+		9092,
+		29092,
 		9200,
 		5601,
-		5678,
-		21000
+		5678
 	],
 	"portsAttributes": {
 		"8081": {
@@ -66,6 +67,12 @@
 		},
 		"8082": {
 			"label": "Kafka UI"
+		},
+		"9092": {
+			"label": "Kafka Broker"
+		},
+		"29092": {
+			"label": "Kafka Broker - Dev"
 		},
 		"9200": {
 			"label": "Elasticsearch API"
@@ -76,9 +83,6 @@
 		"5678": {
 			"label": "debugpy",
 			"onAutoForward": "ignore"
-		},
-		"21000": {
-			"label": "Apache Atlas UI"
 		}
 	}
 

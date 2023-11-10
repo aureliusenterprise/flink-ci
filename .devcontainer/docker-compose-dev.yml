@@ -4,6 +4,7 @@ services:
 
   dev:
     image: flink:1.17.0
+    container_name: dev
     environment:
       FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
       POETRY_VIRTUALENVS_IN_PROJECT: "true"

@@ -50,3 +50,6 @@ git commit -a --no-verify -m "message"
 "eventTime": ['Missing data for required field.'],
 "atlasEntityAudit": ['Missing data for required field.'],
 "kafkaNotification": ['Missing data for required field.']}
+
+
+sudo sysctl -w vm.max_map_count=262144
