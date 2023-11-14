@@ -41,6 +41,16 @@ with the process id mentined before, like e.g. 1234.
 If the connection was successful, you will see an orrange bar on the bottom of vs code.
 Now you can define breakpoints in vs code and step through the code.
 
+# How to create type definitions in Apache Atlas
+
+in the terminal in the dev container
+```bash
+source .venv/bin/activate
+cd /workspace/docker/docker-compose-atlas/scripts
+python init-atlas-m4i-types.py
+```
+
+
 
 # backup - to be removed later on
 git commit -a --no-verify -m "message"

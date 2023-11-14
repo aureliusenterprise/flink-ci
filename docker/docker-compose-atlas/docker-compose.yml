@@ -5,10 +5,10 @@ services:
   atlas:
     image: wombach/docker-apache-atlas:2.2.0.4
     container_name: atlas
-    command: "/workspace/docker-compose-atlas/startup.sh"
+    command: "/workspace/docker/docker-compose-atlas/startup.sh"
     volumes:
       - atlas:/opt/apache-atlas-2.2.0/data
-      - ..:/workspace:cached
+      - ../..:/workspace:cached
     ports:
       - 21000:21000
     networks:
