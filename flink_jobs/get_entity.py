@@ -4,35 +4,26 @@ import sys
 from pathlib import Path
 from typing import TypedDict
 
-from elasticsearch import Elasticsearch
 from pyflink.common import Types
 from pyflink.common.serialization import SimpleStringSchema
 from pyflink.datastream import StreamExecutionEnvironment
-from pyflink.datastream.connectors import DeliveryGuarantee
-from pyflink.datastream.connectors.elasticsearch import (
-    Elasticsearch7SinkBuilder,
-    ElasticsearchEmitter,
-    FlushBackoffType,
-)
 from pyflink.datastream.connectors.kafka import FlinkKafkaConsumer, FlinkKafkaProducer
 
-from flink_tasks import ElasticClient, PublishState
+from flink_tasks import GetEntity
 
 
-class PublishStateConfig(TypedDict):
+class GetEntityConfig(TypedDict):
     """
     Configuration required to execute the PublishState job.
 
     Attributes
     ----------
-    elasticsearch_endpoint: str
-        The endpoint URL for the Elasticsearch instance.
-    elasticsearch_username: str
-        The username for Elasticsearch authentication.
-    elasticsearch_password: str
-        The password for Elasticsearch authentication.
-    elasticsearch_index: str
-        The name of the index, where the state of the documents should be maintained.
+    atlas_endpoint: str
+        The endpoint URL for the Atlas instance.
+    atlas_username: str
+        The username for Atlas authentication.
+    atlas_password: str
+        The password for Atlas authentication.
     kafka_bootstrap_server_hostname: str
         The hostname of the Kafka bootstrap server.
     kafka_bootstrap_server_port: str
@@ -45,29 +36,31 @@ class PublishStateConfig(TypedDict):
         The producer group ID for Kafka.
     kafka_source_topic_name: str
         The Kafka topic name from which data will be consumed.
+    kafka_target_topic_name: str
+        The Kafka topic name to which data will be published.
     """
 
-    elasticsearch_endpoint: str
-    elasticsearch_username: str
-    elasticsearch_password: str
-    elasticsearch_index: str
+    atlas_endpoint: str
+    atlas_username: str
+    atlas_password: str
     kafka_bootstrap_server_hostname: str
     kafka_bootstrap_server_port: str
     kafka_consumer_group_id: str
     kafka_error_topic_name: str
     kafka_producer_group_id: str
     kafka_source_topic_name: str
+    kafka_target_topic_name: str
 
-def main(config: PublishStateConfig) -> None:
+def main(config: GetEntityConfig) -> None:
     """
-    Execute the `PublishState` Flink job.
+    Execute the `GetEntity` Flink job.
 
-    This function sets up the data stream from Kafka, processes it using the `PublishState` logic,
-    and then sinks the data to Elasticsearch and errors to another Kafka topic.
+    This function sets up the data stream from Kafka, processes it using the `GetEntity` logic,
+    and then sinks the data to a new Kafka topic and errors to another Kafka topic.
 
     Parameters
     ----------
-    config : PublishStateConfig
+    config : GetEntityConfig
         The configuration required to execute the job.
     """
     env = StreamExecutionEnvironment.get_execution_environment()
@@ -107,54 +100,43 @@ def main(config: PublishStateConfig) -> None:
         serialization_schema=SimpleStringSchema(),
     )
 
-    elastic_client = ElasticClient(lambda: Elasticsearch(
-        hosts=[config["elasticsearch_endpoint"]],
-        basic_auth=(
-            config["elasticsearch_username"],
-            config["elasticsearch_password"],
-        ),
-    ))
-
-    # Set up the Elasticsearch sink
-    elasticsearch_sink = (
-        Elasticsearch7SinkBuilder()
-        .set_emitter(ElasticsearchEmitter.static_index(config["elasticsearch_index"], "id")) \
-        .set_hosts([config["elasticsearch_endpoint"]])
-        .set_delivery_guarantee(DeliveryGuarantee.AT_LEAST_ONCE) \
-        .set_bulk_flush_max_actions(1) \
-        .set_bulk_flush_max_size_mb(2) \
-        .set_bulk_flush_interval(1000) \
-        .set_bulk_flush_backoff_strategy(FlushBackoffType.CONSTANT, 3, 3000) \
-        .set_connection_username(config["elasticsearch_username"])
-        .set_connection_password(config["elasticsearch_password"])
-        .set_connection_request_timeout(30000) \
-        .set_connection_timeout(31000) \
-        .set_socket_timeout(32000) \
-        .build()
+    kafka_sink = FlinkKafkaProducer(
+        topic=config["kafka_target_topic_name"],
+        producer_config={
+            "bootstrap.servers": kafka_bootstrap_server,
+            "max.request.size": "14999999",
+            "group.id": config["kafka_producer_group_id"],
+        },
+        serialization_schema=SimpleStringSchema(),
     )
 
-    publish_state = PublishState(input_stream, elastic_client)
-    publish_state.index_preparation.main.sink_to(elasticsearch_sink).name("Elasticsearch Sink")
-    publish_state.errors.map(str, Types.STRING()).add_sink(error_sink).name("Error Sink")
 
-    env.execute("Publish State")
+    # Set up the Elasticsearch sink
+
+    get_entity = GetEntity(input_stream,
+                           credentials=(config["atlas_username"],
+                                        config["atlas_password"]))
+    get_entity.main.map(str, Types.STRING()).add_sink(kafka_sink).name("kafka Sink")
+    get_entity.errors.map(str, Types.STRING()).add_sink(error_sink).name("Error Sink")
+
+    env.execute("Get Entity")
 
 
 if __name__ == "__main__":
     """
     Entry point of the script. Load configuration from environment variables and start the job.
     """
-    config: PublishStateConfig = {
-        "elasticsearch_endpoint": os.environ["ELASTICSEARCH_ENDPOINT"],
-        "elasticsearch_username": os.environ["ELASTICSEARCH_USERNAME"],
-        "elasticsearch_password": os.environ["ELASTICSEARCH_PASSWORD"],
-        "elasticsearch_index": os.environ["ELASTICSEARCH_INDEX"],
+    config: GetEntityConfig = {
+        "atlas_endpoint": os.environ["ATLAS_ENDPOINT"],
+        "atlas_username": os.environ["ATLAS_USERNAME"],
+        "atlas_password": os.environ["ATLAS_PASSWORD"],
         "kafka_bootstrap_server_hostname": os.environ["KAFKA_BOOTSTRAP_SERVER_HOSTNAME"],
         "kafka_bootstrap_server_port": os.environ["KAFKA_BOOTSTRAP_SERVER_PORT"],
         "kafka_consumer_group_id": os.environ["KAFKA_CONSUMER_GROUP_ID"],
         "kafka_error_topic_name": os.environ["KAFKA_ERROR_TOPIC_NAME"],
         "kafka_producer_group_id": os.environ["KAFKA_PRODUCER_GROUP_ID"],
-        "kafka_source_topic_name": os.environ["KAFKA_GET_ENTITY_TARGET_TOPIC_NAME"],
+        "kafka_source_topic_name": os.environ["KAFKA_SOURCE_TOPIC_NAME"],
+        "kafka_target_topic_name": os.environ["KAFKA_ATLAS_AUDIT_TOPIC_NAME"],
     }
 
     logging.basicConfig(stream=sys.stdout,

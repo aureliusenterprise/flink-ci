@@ -18,6 +18,10 @@ services:
       KAFKA_PRODUCER_GROUP_ID: "13"
       KAFKA_ERROR_TOPIC_NAME: "DEAD_LETTER_BOX"
       KAFKA_SOURCE_TOPIC_NAME: "ENRICHED_ENTITIES"
+      KAFKA_ATLAS_AUDIT_TOPIC_NAME: "ATLAS_ENTITIES"
+      KAFKA_GET_ENTITY_TARGET_TOPIC_NAME: "ENRICHED_ENTITIES"
+      # "determined.events.topic.name": "DETERMINED_CHANGE",
+      # "sync_elastic.events.topic.name": "SYNC_ELASTIC",
     command: "taskmanager --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
     cap_add:
       - SYS_PTRACE

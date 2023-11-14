@@ -37,7 +37,8 @@ class GetEntityFunction(MapFunction):
         The event loop used for asynchronous tasks.
     """
 
-    def __init__(self, keycloak_factory: KeycloakFactory, credentials: tuple[str, str]) -> None:
+    def __init__(self, keycloak_factory: KeycloakFactory|None,
+                    credentials: tuple[str, str]) -> None:
         """
         Initialize the GetEntityFunction with a Keycloak factory and credentials.
 
@@ -53,7 +54,8 @@ class GetEntityFunction(MapFunction):
 
     def open(self, runtime_context: RuntimeContext) -> None:  # noqa: A003, ARG002
         """Initialize the keycloak instance using the provided keycloak factory."""
-        self.keycloak = self.keycloak_factory()
+        if self.keycloak_factory is not None:
+            self.keycloak = self.keycloak_factory()
         self.loop = asyncio.new_event_loop()
 
     def close(self) -> None:
@@ -107,7 +109,7 @@ class GetEntityFunction(MapFunction):
         return change_message
 
     @property
-    def access_token(self) -> str:
+    def access_token(self) -> str|None:
         """
         Get the current access token using the Keycloak client.
 
@@ -116,6 +118,8 @@ class GetEntityFunction(MapFunction):
         str
             The access token.
         """
+        if self.keycloak is None:
+            return None
         return self.keycloak.token(*self.credentials)["access_token"]
 
 
@@ -143,8 +147,8 @@ class GetEntity:
     def __init__(
         self,
         data_stream: DataStream,
-        keycloak_factory: KeycloakFactory,
         credentials: tuple[str, str],
+        keycloak_factory: KeycloakFactory | None = None,
     ) -> None:
         """
         Initialize the GetEntity class with a given data stream.
