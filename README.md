@@ -3,10 +3,13 @@
 This project houses the Flink jobs and tasks for Aurelius Atlas. This repository provides a integrated development platform to help streamline Flink development and deployment.
 
 ## Table of Contents
-- [Table of Contents](#table-of-contents)
-- [Setup and Installation](#setup-and-installation)
-- [Services](#services)
-- [How to Use](#how-to-use)
+- [Aurelius Atlas - Flink](#aurelius-atlas---flink)
+  - [Table of Contents](#table-of-contents)
+  - [Setup and Installation](#setup-and-installation)
+  - [Services](#services)
+  - [How to Use](#how-to-use)
+    - [Deploying a Flink Job](#deploying-a-flink-job)
+    - [Debugging a Flink Job](#debugging-a-flink-job)
 
 ## Setup and Installation
 
@@ -26,6 +29,7 @@ This project includes several services for end-to-end testing of Flink jobs. Eac
 | Elasticsearch      | Mirrors Aurelius Atlas's Elasticsearch; used for entity lookups and job output storage. | [Link](http://localhost:9200) |
 | Kibana             | Visualizes Elasticsearch data and offers interactive tools.                             | [Link](http://localhost:5601) |
 | Zookeeper          | Manages configuration, naming, synchronization, and group services.                     |                               |
+| Apache Atlas       | Apache Atlas frontend.                                                                  | [Link](http://localhost:21000) |
 
 
 ## How to Use
