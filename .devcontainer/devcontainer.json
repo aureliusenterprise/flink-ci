@@ -7,7 +7,8 @@
 	"dockerComposeFile": [
 		"docker-compose-dev.yml",
 		"docker-compose-elastic7.yml",
-		"docker-compose-kafka.yml"
+		"docker-compose-kafka.yml",
+		//"docker-compose-atlas.yml"
 	],
 	"service": "dev",
 	// The 'workspaceFolder' property is the path VS Code should open by default when
@@ -54,6 +55,8 @@
 	"forwardPorts": [
 		8081,
 		8082,
+		9092,
+		29092,
 		9200,
 		5601,
 		5678
@@ -64,6 +67,12 @@
 		},
 		"8082": {
 			"label": "Kafka UI"
+		},
+		"9092": {
+			"label": "Kafka Broker"
+		},
+		"29092": {
+			"label": "Kafka Broker - Dev"
 		},
 		"9200": {
 			"label": "Elasticsearch API"

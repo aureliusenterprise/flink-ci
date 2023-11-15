@@ -11,7 +11,12 @@ pre-commit run
 # How to deploy flink jobs
 ```bash
 source .venv/bin/activate
-flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
+flink run -d -py flink_jobs/get_entity.py -pyexec /workspace/.venv/bin/python
+```
+
+```bash
+source .venv/bin/activate
+flink run -d -py flink_jobs/publish_state.py -pyexec /workspace/.venv/bin/python
 ```
 
 ```bash
@@ -41,6 +46,16 @@ with the process id mentined before, like e.g. 1234.
 If the connection was successful, you will see an orrange bar on the bottom of vs code.
 Now you can define breakpoints in vs code and step through the code.
 
+# How to create type definitions in Apache Atlas
+
+in the terminal in the dev container
+```bash
+source .venv/bin/activate
+cd /workspace/docker/docker-compose-atlas/scripts
+python init-atlas-m4i-types.py
+```
+
+
 
 # backup - to be removed later on
 git commit -a --no-verify -m "message"
@@ -50,3 +65,6 @@ git commit -a --no-verify -m "message"
 "eventTime": ['Missing data for required field.'],
 "atlasEntityAudit": ['Missing data for required field.'],
 "kafkaNotification": ['Missing data for required field.']}
+
+
+sudo sysctl -w vm.max_map_count=262144

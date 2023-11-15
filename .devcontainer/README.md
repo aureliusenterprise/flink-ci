@@ -24,6 +24,13 @@ docker build -t pyflink:0.1 -f ./docker/images/pyflink/Dockerfile .
 
 this command will create a docker image named pyflink tag 0.1
 
+### Before starting the container
+Run in the linux terminal the following command
+
+sudo sysctl -w vm.max_map_count=262144
+
+This command extends the configuration parameter for the max available memory. This value influences the performance especially when starting up the apache atlas container.
+
 ### For Windows:
 
 1. Make sure the Docker Desktop is running, and open Visual Studio Code.

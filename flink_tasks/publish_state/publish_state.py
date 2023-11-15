@@ -56,7 +56,7 @@ class PublishState:
 
         # Initialize the stage for preparing the validated notifications for indexing.
         self.index_preparation = PrepareNotificationToIndex(
-            self.input_validation.main,
+            self.previous_entity_retrieval.main,
         )
 
         # Aggregate the errors from the various processing stages.

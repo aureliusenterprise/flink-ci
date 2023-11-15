@@ -4,11 +4,13 @@ services:
 
   dev:
     image: flink:1.17.0
+    container_name: dev
     environment:
       FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
       ELASTICSEARCH_USERNAME: "user"
       ELASTICSEARCH_PASSWORD: "password"
+      ELASTICSEARCH_INDEX: "atlas-dev-audit"
       ELASTICSEARCH_ENDPOINT: "http://localhost:9200"
       KAFKA_BOOTSTRAP_SERVER_HOSTNAME: "localhost"
       KAFKA_BOOTSTRAP_SERVER_PORT: "9092"
@@ -16,6 +18,13 @@ services:
       KAFKA_PRODUCER_GROUP_ID: "13"
       KAFKA_ERROR_TOPIC_NAME: "DEAD_LETTER_BOX"
       KAFKA_SOURCE_TOPIC_NAME: "ENRICHED_ENTITIES"
+      KAFKA_ATLAS_AUDIT_TOPIC_NAME: "ATLAS_ENTITIES"
+      KAFKA_GET_ENTITY_TARGET_TOPIC_NAME: "ENRICHED_ENTITIES"
+      # "determined.events.topic.name": "DETERMINED_CHANGE",
+      # "sync_elastic.events.topic.name": "SYNC_ELASTIC",
+      ATLAS_ENDPOINT : "http://atlas:21000/api/atlas"
+      ATLAS_USERNAME: "admin"
+      ATLAS_PASSWORD: "admin"
     command: "taskmanager --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
     cap_add:
       - SYS_PTRACE
@@ -37,7 +46,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  # esdata:
-  # checkpoints:
   code:
-  # kibanadata:
