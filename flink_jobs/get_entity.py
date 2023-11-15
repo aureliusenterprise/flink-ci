@@ -116,7 +116,8 @@ def main(config: GetEntityConfig) -> None:
     get_entity = GetEntity(input_stream,
                            credentials=(config["atlas_username"],
                                         config["atlas_password"]))
-    get_entity.main.map(str, Types.STRING()).add_sink(kafka_sink).name("kafka Sink")
+    get_entity.input_validation.main.map(str, Types.STRING()).\
+                    add_sink(kafka_sink).name("kafka Sink")
     get_entity.errors.map(str, Types.STRING()).add_sink(error_sink).name("Error Sink")
 
     env.execute("Get Entity")

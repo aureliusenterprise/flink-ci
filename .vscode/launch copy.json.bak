@@ -6,6 +6,13 @@
             "type": "debugpy",
             "request": "attach",
             "processId": "${command:pickProcess}"
+        },
+        {
+            "name": "Debug Tests",
+            "type": "python",
+            "request": "test",
+            "console": "internalConsole",
+            "justMyCode": false
         }
     ]
 }

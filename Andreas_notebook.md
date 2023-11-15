@@ -11,7 +11,12 @@ pre-commit run
 # How to deploy flink jobs
 ```bash
 source .venv/bin/activate
-flink run -d -py jobs/publish_state.py -pyexec /workspace/.venv/bin/python
+flink run -d -py flink_jobs/get_entity.py -pyexec /workspace/.venv/bin/python
+```
+
+```bash
+source .venv/bin/activate
+flink run -d -py flink_jobs/publish_state.py -pyexec /workspace/.venv/bin/python
 ```
 
 ```bash
