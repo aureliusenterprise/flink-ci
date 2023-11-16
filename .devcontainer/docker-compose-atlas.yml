@@ -5,10 +5,10 @@ services:
   atlas:
     image: wombach/docker-apache-atlas:2.2.0.4
     container_name: atlas
-    command: "/workspace/docker/docker-compose-atlas/startup.sh"
+    command: "/workspaces/flink-ci/docker/docker-compose-atlas/startup.sh"
     volumes:
       - atlas:/opt/apache-atlas-2.2.0/data
-      - ..:/workspace:cached
+      - ..:/workspaces/flink-ci:cached
     network_mode: service:dev
     restart: unless-stopped
 

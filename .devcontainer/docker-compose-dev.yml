@@ -22,14 +22,14 @@ services:
       KAFKA_GET_ENTITY_TARGET_TOPIC_NAME: "ENRICHED_ENTITIES"
       # "determined.events.topic.name": "DETERMINED_CHANGE",
       # "sync_elastic.events.topic.name": "SYNC_ELASTIC",
-      ATLAS_ENDPOINT : "http://atlas:21000/api/atlas"
+      ATLAS_ENDPOINT : "http://localhost:21000/api/atlas"
       ATLAS_USERNAME: "admin"
       ATLAS_PASSWORD: "admin"
     command: "taskmanager --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
     cap_add:
       - SYS_PTRACE
     volumes:
-      - ..:/workspace:cached
+      - ..:/workspaces/flink-ci:cached
       - checkpoints:/tmp/flink-checkpoints-directory
 
   pyflink-jobmanager:

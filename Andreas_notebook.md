@@ -11,22 +11,22 @@ pre-commit run
 # How to deploy flink jobs
 ```bash
 source .venv/bin/activate
-flink run -d -py flink_jobs/get_entity.py -pyexec /workspace/.venv/bin/python
+flink run -d -py flink_jobs/get_entity.py -pyexec /workspaces/flink-ci/.venv/bin/python
 ```
 
 ```bash
 source .venv/bin/activate
-flink run -d -py flink_jobs/publish_state.py -pyexec /workspace/.venv/bin/python
+flink run -d -py flink_jobs/publish_state.py -pyexec /workspaces/flink-ci/.venv/bin/python
 ```
 
 ```bash
 source .venv/bin/activate
-flink run -d -py examples/elastic_test.py -pyexec /workspace/.venv/bin/python
+flink run -d -py examples/elastic_test.py -pyexec /workspaces/flink-ci/.venv/bin/python
 ```
 
 ```bash
 source .venv/bin/activate
-flink run -d -py examples/kafka_source_flink_sink_demo.py -pyexec /workspace/.venv/bin/python
+flink run -d -py examples/kafka_source_flink_sink_demo.py -pyexec /workspaces/flink-ci/.venv/bin/python
 ```
 example message {"name":"anwo", "id":"15"}
 
