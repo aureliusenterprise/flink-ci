@@ -51,8 +51,7 @@ Now you can define breakpoints in vs code and step through the code.
 in the terminal in the dev container
 ```bash
 source .venv/bin/activate
-cd /workspace/docker/docker-compose-atlas/scripts
-python init-atlas-m4i-types.py
+python docker/docker-compose-atlas/scripts/init-atlas-m4i-types.py
 ```
 
 

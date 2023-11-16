@@ -136,8 +136,8 @@ if __name__ == "__main__":
         "kafka_consumer_group_id": os.environ["KAFKA_CONSUMER_GROUP_ID"],
         "kafka_error_topic_name": os.environ["KAFKA_ERROR_TOPIC_NAME"],
         "kafka_producer_group_id": os.environ["KAFKA_PRODUCER_GROUP_ID"],
-        "kafka_source_topic_name": os.environ["KAFKA_SOURCE_TOPIC_NAME"],
-        "kafka_target_topic_name": os.environ["KAFKA_ATLAS_AUDIT_TOPIC_NAME"],
+        "kafka_source_topic_name": os.environ["KAFKA_ATLAS_AUDIT_TOPIC_NAME"],
+        "kafka_target_topic_name": os.environ["KAFKA_GET_ENTITY_TARGET_TOPIC_NAME"],
     }
 
     logging.basicConfig(stream=sys.stdout,

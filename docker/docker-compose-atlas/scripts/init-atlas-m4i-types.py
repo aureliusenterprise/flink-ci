@@ -15,7 +15,7 @@ store.load({
     "atlas.credentials.username": "admin",
     "atlas.credentials.password": "admin",
     #"atlas.server.url": os.getenv('ATLAS_EXTERNAL_URL') + "/api/atlas",
-    "atlas.server.url": "http://atlas:21000/api/atlas",
+    "atlas.server.url": "http://localhost:21000/api/atlas",
 })
 
 # creation of type deinitions breaks at the moment because the m4i_atlas_core handle_requests
