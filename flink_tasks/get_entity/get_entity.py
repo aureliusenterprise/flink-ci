@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
 from typing import cast
 
 from aiohttp.web import HTTPError
@@ -50,6 +51,9 @@ class GetEntityFunction(MapFunction):
         """
         self.credentials = credentials
         self.keycloak_factory = keycloak_factory
+
+        self._access_token = None
+        self._token_expiration = datetime.now(tz=timezone.utc)
 
     def open(self, runtime_context: RuntimeContext) -> None:  # noqa: A003, ARG002
         """Initialize the keycloak instance using the provided keycloak factory."""
@@ -111,12 +115,29 @@ class GetEntityFunction(MapFunction):
         """
         Get the current access token using the Keycloak client.
 
+        If the token has expired or is not set, a new token is fetched.
+
+        The token is considered expired before its actual expiration time by a buffer to ensure that
+        operations using the token do not fail due to a token that expires mid-operation. The buffer
+        is set to 80% of the actual token's lifespan.
+
         Returns
         -------
         str
             The access token.
         """
-        return self.keycloak.token(*self.credentials)["access_token"]
+        now = datetime.now(tz=timezone.utc)
+        # If the token is expired or about to expire, fetch a new one
+        if now > self._token_expiration or self._access_token is None:
+            token_response = self.keycloak.token(*self.credentials)
+
+            # Calculate the expiration time with some buffer (80% of the actual expiration)
+            expires_in = int(token_response["expires_in"])
+            self._token_expiration = now + timedelta(seconds=expires_in * 0.8)
+
+            self._access_token = token_response["access_token"]
+
+        return self._access_token
 
 
 class GetEntity:

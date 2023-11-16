@@ -86,7 +86,7 @@ def keycloak_factory() -> KeycloakFactory:
 
     def mock() -> KeycloakOpenID:
         mock_keycloak = Mock(spec=KeycloakOpenID)
-        mock_keycloak.token.return_value = {"access_token": "1234"}
+        mock_keycloak.token.return_value = {"access_token": "1234", "expires_in": 3600}
         return mock_keycloak
 
     return mock
