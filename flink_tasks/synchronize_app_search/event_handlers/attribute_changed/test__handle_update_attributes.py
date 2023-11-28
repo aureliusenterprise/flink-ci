@@ -85,7 +85,7 @@ def test__update_with_valid_attributes(elasticsearch: Mock) -> None:
     elasticsearch.get.assert_called_once_with(index="test_index", id="1234")
 
 
-def test_update_no_whitelisted_attributes(elasticsearch: Mock) -> None:
+def test__update_no_whitelisted_attributes(elasticsearch: Mock) -> None:
     """
     Test handle_update_attributes with no whitelisted attributes provided for update.
 
@@ -119,7 +119,7 @@ def test_update_no_whitelisted_attributes(elasticsearch: Mock) -> None:
 
     assert len(updated_docs) == 0
 
-def test_entity_message_without_new_value(elasticsearch: Mock) -> None:
+def test__entity_message_without_new_value(elasticsearch: Mock) -> None:
     """
     Test handle_update_attributes with an entity message lacking new value.
 
@@ -147,7 +147,7 @@ def test_entity_message_without_new_value(elasticsearch: Mock) -> None:
         handle_update_attributes(message, elasticsearch, "test_index")
 
 
-def test_entity_not_found_in_elasticsearch(elasticsearch: Mock) -> None:
+def test__entity_not_found_in_elasticsearch(elasticsearch: Mock) -> None:
     """
     Test handle_update_attributes for a non-existent entity in Elasticsearch.
 
