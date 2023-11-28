@@ -14,36 +14,17 @@ This section describes how to install the development container using Visual Stu
 
 Regardless of your operating system, please install the [Remote Development extension pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack) in Visual Studio Code.
 
-Further, the WSL must use a Ubuntu 20.04 version, which has docker and docker compose installed.
-- installation of docker: https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-20-04
-- installation of docker compose: https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-compose-on-ubuntu-20-04
-The provided config file for the dev container is NOT working on Ubuntu 22.04.
-
-For the docker compose file to work you have to build a docker image by running the followign commands
-docker build -t pyflink:0.1 -f ./docker/images/pyflink/Dockerfile .
-
-this command will create a docker image named pyflink tag 0.1
-
 ### For Windows:
 
 1. Make sure the Docker Desktop is running, and open Visual Studio Code.
 
-1.a) If you are using WSL 2 on Windows, to ensure the WSL 2 back-end is enabled: Right-click on the Docker taskbar item and select **Settings**. Check **Use the WSL 2 based engine** and verify your distribution is enabled under **Resources > WSL Integration**.
-
-1.b) startup WSL and press `F1` to open command pallet, and type `Connect to WSL`. Select the right distribution and a new VS Code instance running in the WSL is opened.
-
-1.c) In the menu on the left there is a button: Clone repository. Press the button and add the followign URL https://github.com/aureliusenterprise/flink-ci.git and press enter. Then open the repository. Now you have access to the code in the WSL with your VS Code.
-
-
 2. Press `F1` to open the command palette, and then type "Dev Containers: Clone Repository in Container Volume" and select it from the list. Alternatively, you can click on the green icon in the bottom-left corner of the VS Code window and select "Clone Repository in Container Volume" from the popup menu.
 
-2.a) enter the followign URL https://github.com/aureliusenterprise/flink-ci.git and press enter
-
-3. Next, the command palette will ask you for the repository URL. Copy the URL of the GitHub repository, paste it into the command palette and confirm by pressing Enter.
+3. Next, the command palette will ask you for the repository URL. Paste `https://github.com/aureliusenterprise/flink-ci.git` into the command palette and confirm by pressing Enter.
 
 4. VS Code will automatically build the container and connect to it. This might take some time for the first run as it downloads the required Docker images and installs extensions.
 
-5. Once connected, you'll see "Dev Container: Python 3" in the bottom-left corner of the VS Code window, indicating that you are now working inside the container.
+5. Once connected, you'll see "Dev Container: Aurelius Atlas - Flink" in the bottom-left corner of the VS Code window, indicating that you are now working inside the container.
 
 6. You're all set! You can now run, develop, build, and test the project using the provided development environment.
 
@@ -54,13 +35,13 @@ this command will create a docker image named pyflink tag 0.1
 2. Clone the GitHub repository to your local machine.
 
     ```bash
-    git clone <REPOSITORY_URL>
+    git clone https://github.com/aureliusenterprise/flink-ci.git
     ```
 
 3. Navigate to the cloned project root and open the project in VS Code by running:
 
     ```bash
-    cd <PROJECT_NAME>
+    cd flink-ci
     code .
     ```
 
@@ -68,7 +49,7 @@ this command will create a docker image named pyflink tag 0.1
 
 5. VS Code will automatically build the container and connect to it. This might take some time for the first run as it downloads the required Docker images and installs extensions.
 
-6. Once connected, you'll see "Dev Container: Python 3" in the bottom-left corner of the VS Code window, indicating that you are now working inside the container.
+6. Once connected, you'll see "Dev Container: Aurelius Atlas - Flink" in the bottom-left corner of the VS Code window, indicating that you are now working inside the container.
 
 7. You're all set! You can now run, develop, build, and test the project using the provided development environment.
 
@@ -90,6 +71,6 @@ To connect PyCharm to the Development Container, please [follow these instructio
 
 5. GitHub Codespaces will automatically build the container and connect to it. This might take some time for the first run as it downloads the required Docker images and installs extensions.
 
-6. Once connected, you'll see "Dev Container: Python 3" in the bottom-left corner of the VS Code window, indicating that you are now working inside the container.
+6. Once connected, you'll see "Dev Container: Aurelius Atlas - Flink" in the bottom-left corner of the VS Code window, indicating that you are now working inside the container.
 
 7. You're all set! You can now run, develop, build, and test the project using the provided development environment.
