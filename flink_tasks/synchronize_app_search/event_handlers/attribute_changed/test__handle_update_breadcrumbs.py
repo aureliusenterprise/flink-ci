@@ -7,6 +7,7 @@ from flink_tasks import AppSearchDocument, EntityMessage, EntityMessageType
 
 from .handle_update_breadcrumbs import (
     EntityDataNotProvidedError,
+    EntityNameNotFoundError,
     handle_update_breadcrumbs,
 )
 
@@ -128,9 +129,9 @@ def test__handle_update_derived_entities_no_name_update() -> None:
         changed_attributes=["name"],
     )
 
-    updated_documents = handle_update_breadcrumbs(message, Mock(), "test_index")
+    with pytest.raises(EntityNameNotFoundError):
+        handle_update_breadcrumbs(message, Mock(), "test_index")
 
-    assert len(updated_documents) == 0
 
 
 def test__handle_update_derived_entities_no_new_value() -> None:
