@@ -11,58 +11,6 @@ from .handle_update_derived_entities import (
 )
 
 
-def test__handle_update_derived_entities_no_name_update() -> None:
-    """
-    Test handling of derived entities update when there's no 'name' attribute update.
-
-    This test verifies that the function returns an empty list when the updated message
-    does not contain the 'name' attribute, indicating that no derived entity update is needed.
-
-    Asserts
-    -------
-    - The function returns an empty list.
-    """
-    message = EntityMessage(
-        type_name="m4i_data_domain",
-        guid="1234",
-        original_event_type=EntityAuditAction.ENTITY_CREATE,
-        event_type=EntityMessageType.ENTITY_CREATED,
-        new_value=Entity(
-            guid="1234",
-            type_name="m4i_data_domain",
-            attributes=Attributes.from_dict({"description": "test"}),
-        ),
-        inserted_attributes=["description"],
-    )
-
-    updated_documents = handle_update_derived_entities(message, Mock(), "test_index")
-
-    assert len(updated_documents) == 0
-
-
-def test__handle_update_derived_entities_no_new_value() -> None:
-    """
-    Test handling of derived entities update when the new_value attribute is missing.
-
-    This test checks if the function raises an EntityDataNotProvidedError when the
-    entity message lacks the 'new_value' attribute, which is essential for the update.
-
-    Asserts
-    -------
-    - EntityDataNotProvidedError is raised.
-    """
-    message = EntityMessage(
-        type_name="m4i_data_domain",
-        guid="1234",
-        original_event_type=EntityAuditAction.ENTITY_CREATE,
-        event_type=EntityMessageType.ENTITY_CREATED,
-        changed_attributes=["name"],
-    )
-
-    with pytest.raises(EntityDataNotProvidedError):
-        handle_update_derived_entities(message, Mock(), "test_index")
-
-
 def test__handle_update_derived_entities_update_document() -> None:
     """
     Test the update of a document with derived entity information.
@@ -77,7 +25,7 @@ def test__handle_update_derived_entities_update_document() -> None:
     Asserts
     -------
     - The number of updated documents returned is 1.
-    - The updated document's attributes (like guid, typename, name) are correctly updated.
+    - The updated document's attributes are still correct.
     - The derived entity's name in the updated document is updated to the new name.
     """
     message = EntityMessage(
@@ -154,3 +102,55 @@ def test__handle_update_derived_entities_no_derived_entities() -> None:
         updated_documents = handle_update_derived_entities(message, Mock(), "test_index")
 
         assert len(updated_documents) == 0
+
+
+def test__handle_update_derived_entities_no_name_update() -> None:
+    """
+    Test handling of derived entities update when there's no 'name' attribute update.
+
+    This test verifies that the function returns an empty list when the updated message
+    does not contain the 'name' attribute, indicating that no derived entity update is needed.
+
+    Asserts
+    -------
+    - The function returns an empty list.
+    """
+    message = EntityMessage(
+        type_name="m4i_data_domain",
+        guid="1234",
+        original_event_type=EntityAuditAction.ENTITY_CREATE,
+        event_type=EntityMessageType.ENTITY_CREATED,
+        new_value=Entity(
+            guid="1234",
+            type_name="m4i_data_domain",
+            attributes=Attributes.from_dict({"description": "test"}),
+        ),
+        inserted_attributes=["description"],
+    )
+
+    updated_documents = handle_update_derived_entities(message, Mock(), "test_index")
+
+    assert len(updated_documents) == 0
+
+
+def test__handle_update_derived_entities_no_new_value() -> None:
+    """
+    Test handling of derived entities update when the new_value attribute is missing.
+
+    This test checks if the function raises an EntityDataNotProvidedError when the
+    entity message lacks the 'new_value' attribute, which is essential for the update.
+
+    Asserts
+    -------
+    - EntityDataNotProvidedError is raised.
+    """
+    message = EntityMessage(
+        type_name="m4i_data_domain",
+        guid="1234",
+        original_event_type=EntityAuditAction.ENTITY_CREATE,
+        event_type=EntityMessageType.ENTITY_CREATED,
+        changed_attributes=["name"],
+    )
+
+    with pytest.raises(EntityDataNotProvidedError):
+        handle_update_derived_entities(message, Mock(), "test_index")
