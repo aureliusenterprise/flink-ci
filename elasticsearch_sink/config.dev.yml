@@ -1,0 +1,3 @@
+TASKS_MAX: 1
+TOPICS: app_search_documents
+CONNECTION_URL: http://localhost:9200

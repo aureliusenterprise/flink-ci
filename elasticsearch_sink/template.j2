@@ -1,0 +1,12 @@
+{
+  "name": "elasticsearch-sink",
+  "config": {
+    "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
+    "tasks.max": "{{ TASKS_MAX }}",
+    "topics": "{{ TOPICS }}",
+    "connection.url": "{{ CONNECTION_URL }}",
+    "type.name": "_doc",
+    "key.ignore": "true",
+    "schema.ignore": "true"
+  }
+}

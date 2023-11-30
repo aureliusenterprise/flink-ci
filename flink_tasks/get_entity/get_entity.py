@@ -99,6 +99,7 @@ class GetEntityFunction(MapFunction):
             entity_details = self.loop.run_until_complete(
                 get_entity_by_guid(
                     guid=entity.guid,
+                    type_name=entity.type_name,
                     access_token=self.access_token,
                     cache_read=False,
                 ),
