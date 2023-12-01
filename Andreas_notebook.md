@@ -5,8 +5,14 @@
 
 # pre-commit checks
 in a terminal you can get more information about a pre-commit failure by running
+```bash
 source .venv/bin/activate
 pre-commit run
+```
+commit without pre-commit
+```bash
+git commit -m "message" --no-check
+```
 
 # How to deploy flink jobs
 ```bash
@@ -67,3 +73,6 @@ git commit -a --no-verify -m "message"
 
 
 sudo sysctl -w vm.max_map_count=262144
+
+to be added to wsl config file
+kernelCommandLine="sysctl.vm.max_map_count=262144"
