@@ -6,7 +6,9 @@
     "topics": "{{ TOPICS }}",
     "connection.url": "{{ CONNECTION_URL }}",
     "type.name": "_doc",
-    "key.ignore": "true",
-    "schema.ignore": "true"
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "true",
+    "behavior.on.null.values": "delete"
   }
 }

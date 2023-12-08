@@ -5,10 +5,13 @@ import sys
 from pathlib import Path
 from typing import TypedDict
 
-from pyflink.common import Types
-from pyflink.common.serialization import SimpleStringSchema
+from pyflink.common import SimpleStringSchema, Types
 from pyflink.datastream import StreamExecutionEnvironment
-from pyflink.datastream.connectors.kafka import FlinkKafkaProducer
+from pyflink.datastream.connectors.kafka import (
+    DeliveryGuarantee,
+    KafkaRecordSerializationSchema,
+    KafkaSink,
+)
 
 
 class SynchronizeAppSearchConfig(TypedDict):
@@ -46,32 +49,33 @@ def main(config: SynchronizeAppSearchConfig) -> None:
     )
 
     # Set up the Kafka sink
-    kafka_sink = FlinkKafkaProducer(
-        topic=config["kafka_app_search_topic_name"],
-        producer_config={
-            "bootstrap.servers": kafka_bootstrap_server,
-            "max.request.size": "14999999",
-            "group.id": config["kafka_producer_group_id"],
-        },
-        serialization_schema=SimpleStringSchema(),
+    kafka_sink = (
+        KafkaSink.builder()
+        .set_bootstrap_servers(kafka_bootstrap_server)
+        .set_record_serializer(
+            KafkaRecordSerializationSchema.builder()
+            .set_topic(config["kafka_app_search_topic_name"])
+            .set_value_serialization_schema(SimpleStringSchema())
+            .build(),
+        )
+        .set_delivery_guarantee(DeliveryGuarantee.AT_LEAST_ONCE)
+        .set_property("parse.key", "true")
+        .set_property("key.separator", "|")
+        .build()
     )
+
+    record = {
+        "title": "Example Message",
+        "description": "This is an example message.",
+        "url": "https://example.com/example-message",
+    }
 
     documents = [
-        {
-            "title": "Example Message",
-            "description": "This is an example message.",
-            "url": "https://example.com/example-message",
-        },
+        f"test|{json.dumps(record)}",
     ]
 
-    stream = env.from_collection(documents, Types.MAP(Types.STRING(), Types.STRING()))
-
-    pipeline = stream.map(
-        json.dumps,
-        Types.STRING(),
-    )
-
-    pipeline.add_sink(kafka_sink).name("Kafka Sink")
+    stream = env.from_collection(documents, Types.STRING())
+    stream.sink_to(kafka_sink).name("Kafka Sink")
 
     env.execute("Synchronize App Search")
 

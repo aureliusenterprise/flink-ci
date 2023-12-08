@@ -46,16 +46,18 @@ services:
       CONNECT_GROUP_ID: kafka-connect-group
       CONNECT_CONFIG_STORAGE_TOPIC: kafka-connect-configs
       CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_CONFIG_STORAGE_CLEANUP_POLICY: compact
       CONNECT_OFFSET_STORAGE_TOPIC: kafka-connect-offsets
       CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_CLEANUP_POLICY: compact
       CONNECT_STATUS_STORAGE_TOPIC: kafka-connect-status
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
-      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_STATUS_STORAGE_CLEANUP_POLICY: compact
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
       CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
       CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
-      CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.StringConverter"
-      CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+
       CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
     network_mode: service:dev
 
