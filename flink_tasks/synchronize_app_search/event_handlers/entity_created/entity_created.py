@@ -83,11 +83,11 @@ def get_breadcrumbs_of_entity(
     if input_entity is None:
         return [], [], []
 
-    # Get parents of entity
-    parent_guids = [x.guid for x in input_entity.get_parents()]
+    # Get the first parent of the entity
+    first_parent_guid = [x.guid for x in input_entity.get_parents()][:1]
     breadcrumb_name, breadcrumb_guid, breadcrumb_type = [], [], []
     # Look up breadcrumbs of parents
-    query = {"query": {"terms": {"breadcrumb_guid": parent_guids}}}
+    query = {"query": {"terms": {"breadcrumb_guid": first_parent_guid}}}
 
     for document in get_documents(query, elastic, index_name):
         breadcrumb_name += [*document.breadcrumbname, document.name]
