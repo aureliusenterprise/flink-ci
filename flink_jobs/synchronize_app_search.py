@@ -1,17 +1,17 @@
-import json
 import logging
 import os
 import sys
 from pathlib import Path
 from typing import TypedDict
 
-from pyflink.common import SimpleStringSchema, Types
+from pyflink.common import Row, Types
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.datastream.connectors.kafka import (
     DeliveryGuarantee,
     KafkaRecordSerializationSchema,
     KafkaSink,
 )
+from pyflink.datastream.formats.json import JsonRowSerializationSchema
 
 
 class SynchronizeAppSearchConfig(TypedDict):
@@ -55,27 +55,32 @@ def main(config: SynchronizeAppSearchConfig) -> None:
         .set_record_serializer(
             KafkaRecordSerializationSchema.builder()
             .set_topic(config["kafka_app_search_topic_name"])
-            .set_value_serialization_schema(SimpleStringSchema())
+            .set_key_serialization_schema(
+                JsonRowSerializationSchema.Builder()
+                .with_type_info(Types.ROW_NAMED(["id"], [Types.STRING()]))
+                .build(),
+            )
+            .set_value_serialization_schema(
+                JsonRowSerializationSchema.Builder()
+                .with_type_info(Types.ROW_NAMED(["id", "value"], [Types.STRING(), Types.STRING()]))
+                .build(),
+            )
             .build(),
         )
         .set_delivery_guarantee(DeliveryGuarantee.AT_LEAST_ONCE)
-        .set_property("parse.key", "true")
-        .set_property("key.separator", "|")
         .build()
     )
 
-    record = {
-        "title": "Example Message",
-        "description": "This is an example message.",
-        "url": "https://example.com/example-message",
-    }
+    documents = [Row(id="example-document", value=None)]
 
-    documents = [
-        f"test|{json.dumps(record)}",
-    ]
+    stream = env.from_collection(
+        documents,
+        Types.ROW_NAMED(["id", "value"], [Types.STRING(), Types.STRING()]),
+    )
 
-    stream = env.from_collection(documents, Types.STRING())
-    stream.sink_to(kafka_sink).name("Kafka Sink")
+    stream.sink_to(
+        kafka_sink,
+    ).name("Kafka Sink")
 
     env.execute("Synchronize App Search")
 
