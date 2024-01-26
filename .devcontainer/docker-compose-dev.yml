@@ -7,15 +7,22 @@ services:
     environment:
       FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
+      ELASTICSEARCH_APP_SEARCH_INDEX_NAME: "app_search_documents"
       ELASTICSEARCH_USERNAME: "user"
       ELASTICSEARCH_PASSWORD: "password"
       ELASTICSEARCH_ENDPOINT: "http://localhost:9200"
+      KAFKA_APP_SEARCH_TOPIC_NAME: "app_search_documents"
       KAFKA_BOOTSTRAP_SERVER_HOSTNAME: "localhost"
       KAFKA_BOOTSTRAP_SERVER_PORT: "9092"
       KAFKA_CONSUMER_GROUP_ID: "13"
       KAFKA_PRODUCER_GROUP_ID: "13"
       KAFKA_ERROR_TOPIC_NAME: "DEAD_LETTER_BOX"
       KAFKA_SOURCE_TOPIC_NAME: "ENRICHED_ENTITIES"
+      KEYCLOAK_CLIENT_ID: "atlas"
+      KEYCLOAK_PASSWORD: "admin"
+      KEYCLOAK_REALM_NAME: "m4i"
+      KEYCLOAK_SERVER_URL: "http://localhost:8080/auth"
+      KEYCLOAK_USERNAME: "admin"
     command: "taskmanager --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
     cap_add:
       - SYS_PTRACE
