@@ -17,7 +17,7 @@ from pyflink.datastream.connectors.kafka import (
 )
 from pyflink.datastream.formats.json import JsonRowSerializationSchema
 
-from flink_tasks import DetermineChange, GetEntity, SynchronizeAppSearch
+from flink_tasks import DetermineChange, GetEntity, PublishState, SynchronizeAppSearch
 
 
 class SynchronizeAppSearchConfig(TypedDict):
@@ -26,6 +26,10 @@ class SynchronizeAppSearchConfig(TypedDict):
 
     Attributes
     ----------
+    elasticsearch_app_search_index_name: str
+        The name of the index in Elasticsearch to which app search documents are synchronized.
+    elasticsearch_state_index_name: str
+        The name of the index in Elasticsearch to which entity state is synchronized.
     elasticsearch_endpoint: str
         The endpoint URL for the Elasticsearch instance.
     elasticsearch_username: str
@@ -49,6 +53,7 @@ class SynchronizeAppSearchConfig(TypedDict):
     """
 
     elasticsearch_app_search_index_name: str
+    elasticsearch_state_index_name: str
     elasticsearch_endpoint: str
     elasticsearch_username: str
     elasticsearch_password: str
@@ -139,7 +144,13 @@ def main(config: SynchronizeAppSearchConfig) -> None:
         (config["keycloak_username"], config["keycloak_password"]),
     )
 
-    determine_change = DetermineChange(get_entity.main)
+    publish_state = PublishState(
+        get_entity.main,
+        create_elasticsearch_client,
+        config["elasticsearch_state_index_name"],
+    )
+
+    determine_change = DetermineChange(publish_state.previous_entity_retrieval.main)
 
     synchronize_app_search = SynchronizeAppSearch(
         determine_change.main,
@@ -163,6 +174,7 @@ if __name__ == "__main__":
     """
     config: SynchronizeAppSearchConfig = {
         "elasticsearch_app_search_index_name": os.environ["ELASTICSEARCH_APP_SEARCH_INDEX_NAME"],
+        "elasticsearch_state_index_name": os.environ["ELASTICSEARCH_STATE_INDEX_NAME"],
         "elasticsearch_endpoint": os.environ["ELASTICSEARCH_ENDPOINT"],
         "elasticsearch_username": os.environ["ELASTICSEARCH_USERNAME"],
         "elasticsearch_password": os.environ["ELASTICSEARCH_PASSWORD"],

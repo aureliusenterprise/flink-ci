@@ -3,8 +3,6 @@ from dataclasses import dataclass
 from dataclasses_json import DataClassJsonMixin, LetterCase, dataclass_json
 from m4i_atlas_core import AtlasChangeMessage, Entity
 
-from flink_tasks.elastic_client import ElasticSearchEntity
-
 
 @dataclass_json(letter_case=LetterCase.CAMEL)  # type: ignore
 @dataclass
@@ -32,7 +30,7 @@ class KafkaNotification(DataClassJsonMixin):
     atlas_entity : Entity, optional
         The entity from Apache Atlas associated with the notification. Defaults to None.
 
-    previous_version : ElasticSearchEntity, optional
+    previous_version : Entity, optional
         The previous version of the entity from Elasticsearch, before the change occurred.
         Defaults to None.
     """
@@ -42,4 +40,4 @@ class KafkaNotification(DataClassJsonMixin):
     atlas_entity_audit: dict
     kafka_notification: AtlasChangeMessage
     atlas_entity: Entity | None = None
-    previous_version: ElasticSearchEntity | None = None
+    previous_version: Entity | None = None

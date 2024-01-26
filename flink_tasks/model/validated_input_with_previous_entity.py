@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 
 from dataclasses_json import LetterCase, dataclass_json
-
-from flink_tasks.elastic_client import ElasticSearchEntity
+from m4i_atlas_core import Entity
 
 from .validated_input import ValidatedInput
 
@@ -19,4 +18,4 @@ class ValidatedInputWithPreviousEntity(ValidatedInput):
         The previous version of the entity from Elasticsearch before any changes were made.
     """
 
-    previous_version: ElasticSearchEntity
+    previous_version: Entity

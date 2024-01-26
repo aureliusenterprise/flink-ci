@@ -1,13 +1,36 @@
-from pyflink.datastream import DataStream, MapFunction, OutputTag
+from collections.abc import Callable
+
+from elasticsearch import ApiError, Elasticsearch
+from m4i_atlas_core import Entity
+from pyflink.datastream import DataStream, MapFunction, OutputTag, RuntimeContext
 
 from flink_tasks import ValidatedInput, ValidatedInputWithPreviousEntity
-from flink_tasks.elastic_client import (
-    ElasticClient,
-    ElasticPreviousStateRetrieveError,
-)
+
+ElasticsearchFactory = Callable[[], Elasticsearch]
 
 ELASTICSEARCH_ERROR = OutputTag("elastic_error")
 NO_PREVIOUS_ENTITY_ERROR = OutputTag("no_previous_entity")
+
+
+class ElasticPreviousStateRetrieveError(Exception):
+    """Exception raised for errors in the retrieval of previous state from ElasticSearch."""
+
+    def __init__(self, guid: str, creation_time: int) -> None:
+        """
+        Initialize the ElasticPreviousStateRetrieveError exception.
+
+        Parameters
+        ----------
+        guid : str
+            The GUID for which the retrieval of previous state failed.
+        creation_time : int
+            The creation time for which the retrieval of previous state failed.
+        """
+        message = f"Failed to retrieve pervious state for guid {guid} and time {creation_time}"
+        super().__init__(message)
+
+        self.guid = guid
+        self.creation_time = creation_time
 
 
 class GetPreviousEntityFunction(MapFunction):
@@ -19,21 +42,35 @@ class GetPreviousEntityFunction(MapFunction):
 
     Attributes
     ----------
-    elastic_client : ElasticClient
+    elastic_factory : ElasticClient
         Custom client for querying the desired Elasticsearch index.
+    index_name : str
+        The name of the index in Elasticsearch to which data is synchronized.
     """
 
-    def __init__(self, elastic_client: ElasticClient) -> None:
+    def __init__(self, elastic_factory: ElasticsearchFactory, index_name: str) -> None:
         """
         Initialize the `GetPreviousEntityFunction` instance.
 
         Parameters
         ----------
-        elastic_client : ElasticClient
-            Custom client for querying the desired Elasticsearch index.
+        elastic_factory : ElasticsearchFactory
+            A factory function for creating Elasticsearch clients.
         """
         super().__init__()
-        self.elastic_client = elastic_client
+        self.elastic_factory = elastic_factory
+        self.index_name = index_name
+
+    def open(self, context: RuntimeContext) -> None:  # noqa: A003, ARG002
+        """
+        Initialize the Elasticsearch client.
+
+        Parameters
+        ----------
+        context : RuntimeContext
+            The context for this operator.
+        """
+        self.elasticsearch = self.elastic_factory()
 
     def map(  # noqa: A003
         self,
@@ -55,15 +92,43 @@ class GetPreviousEntityFunction(MapFunction):
         entity_guid = value.entity.guid
         msg_creation_time = value.msg_creation_time
 
-        try:
-            previous_version = self.elastic_client.get_previous_atlas_entity(
-                entity_guid=entity_guid,
-                creation_time=msg_creation_time,
-            )
-        except ElasticPreviousStateRetrieveError as e:
-            return ELASTICSEARCH_ERROR, e
+        query = {
+            "bool": {
+                "filter": [
+                    {
+                        "match": {
+                            "body.guid.keyword": entity_guid,
+                        },
+                    },
+                    {
+                        "range": {
+                            "msgCreationTime": {
+                                "lt": msg_creation_time,
+                            },
+                        },
+                    },
+                ],
+            },
+        }
 
-        if previous_version is None:
+        sort = {
+            "msgCreationTime": {"numeric_type": "long", "order": "desc"},
+        }
+
+        try:
+            result = self.elasticsearch.search(
+                index=self.index_name,
+                query=query,
+                sort=sort,
+                size=1,
+            )
+        except ApiError:
+            return ELASTICSEARCH_ERROR, ElasticPreviousStateRetrieveError(
+                entity_guid,
+                msg_creation_time,
+            )
+
+        if result["hits"]["total"]["value"] == 0:
             return NO_PREVIOUS_ENTITY_ERROR, ValueError(
                 f"No previous version found for entity {entity_guid}",
             )
@@ -72,8 +137,12 @@ class GetPreviousEntityFunction(MapFunction):
             value.entity,
             value.event_time,
             value.msg_creation_time,
-            previous_version,
+            Entity.from_dict(result["hits"]["hits"][0]["_source"]["body"]),
         )
+
+    def close(self) -> None:
+        """Close the Elasticsearch client."""
+        self.elasticsearch.close()
 
 
 class GetPreviousEntity:
@@ -98,7 +167,12 @@ class GetPreviousEntity:
         The union of elastic_errors and no_previous_entity_errors.
     """
 
-    def __init__(self, input_stream: DataStream, elastic_client: ElasticClient) -> None:
+    def __init__(
+        self,
+        input_stream: DataStream,
+        elastic_factory: ElasticsearchFactory,
+        index_name: str,
+    ) -> None:
         """
         Initialize `GetPreviousEntity` with an input data stream.
 
@@ -106,11 +180,17 @@ class GetPreviousEntity:
         ----------
         input_stream : DataStream
             The input stream of validated notifications.
+        elastic_factory : ElasticsearchFactory
+            A factory function for creating Elasticsearch clients.
+        index_name : str
+            The name of the Elasticsearch index to query.
         """
         self.input_stream = input_stream
-        self.elastic_client = elastic_client
+        self.elastic_factory = elastic_factory
 
-        self.main = self.input_stream.map(GetPreviousEntityFunction(elastic_client)).name(
+        self.main = self.input_stream.map(
+            GetPreviousEntityFunction(elastic_factory, index_name),
+        ).name(
             "previous_entity_lookup",
         )
 

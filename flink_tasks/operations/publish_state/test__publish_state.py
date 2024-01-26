@@ -80,7 +80,7 @@ def test__publish_state_validate_input(
     """
     data_stream = environment.from_collection([event.to_json()])
 
-    publish_state = PublishState(data_stream, mock.Mock())
+    publish_state = PublishState(data_stream, mock.Mock, "test-index")
 
     expected = [
         ValidatedInput(
@@ -107,7 +107,7 @@ def test__publish_state_validate_input_with_invalid_input(
     invalid_input = '{"msgCreationTime": 1, "eventTime": 1, "atlasEntityAudit": {}}'
     data_stream = environment.from_collection([invalid_input])
 
-    publish_state = PublishState(data_stream, mock.Mock())
+    publish_state = PublishState(data_stream, mock.Mock, "test-index")
 
     output = list(publish_state.errors.execute_and_collect())
 
