@@ -1,1 +1,3 @@
+#!/bin/bash
+
 jinja2 elasticsearch_sink/template.j2 elasticsearch_sink/config.dev.yml | curl -X PUT -H "Content-Type: application/json" --data @- http://localhost:8083/connectors/elasticsearch-sink/config

@@ -28,6 +28,7 @@ services:
       - SYS_PTRACE
     volumes:
       - ..:/workspace:cached
+      - atlas-config:/tmp/atlas-config
       - checkpoints:/tmp/flink-checkpoints-directory
 
   pyflink-jobmanager:
@@ -44,7 +45,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  # esdata:
-  # checkpoints:
+  atlas-config:
   code:
   # kibanadata:

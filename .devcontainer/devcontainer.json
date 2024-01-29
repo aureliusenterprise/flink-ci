@@ -7,7 +7,8 @@
 	"dockerComposeFile": [
 		"docker-compose-dev.yml",
 		"docker-compose-elastic7.yml",
-		"docker-compose-kafka.yml"
+		"docker-compose-kafka.yml",
+		"docker-compose-atlas.yml"
 	],
 	"service": "dev",
 	// The 'workspaceFolder' property is the path VS Code should open by default when
@@ -22,7 +23,7 @@
 		"ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {},
 		"ghcr.io/paul-gilber/devcontainer-features/jinja2-cli-homebrew:1": {}
 	},
-	"initializeCommand": "bash .devcontainer/initialize.sh",
+	"updateContentCommand": "bash .devcontainer/updatecontent.sh",
 	"postCreateCommand": "bash .devcontainer/postcreate.sh",
 	// Configure tool-specific properties.
 	"customizations": {
@@ -48,14 +49,22 @@
 	},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	"forwardPorts": [
+		5601,
+		5678,
 		8081,
 		8082,
 		8083,
 		9200,
-		5601,
-		5678
+		21000
 	],
 	"portsAttributes": {
+		"5601": {
+			"label": "Kibana UI"
+		},
+		"5678": {
+			"label": "debugpy",
+			"onAutoForward": "ignore"
+		},
 		"8081": {
 			"label": "Flink UI"
 		},
@@ -68,12 +77,8 @@
 		"9200": {
 			"label": "Elasticsearch API"
 		},
-		"5601": {
-			"label": "Kibana UI"
-		},
-		"5678": {
-			"label": "debugpy",
-			"onAutoForward": "ignore"
+		"21000": {
+			"label": "Apache Atlas"
 		}
 	}
 

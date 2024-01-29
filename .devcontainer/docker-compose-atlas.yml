@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+
+  atlas:
+    image: wombach/docker-apache-atlas:2.2.0.4
+    container_name: atlas
+    command: "/tmp/atlas-config/startup.sh"
+    volumes:
+      - atlas-config:/tmp/atlas-config
+      - atlas:/opt/apache-atlas-2.2.0/data
+    network_mode: service:dev
+    restart: unless-stopped
+
+volumes:
+  atlas:
+  atlas-config:
