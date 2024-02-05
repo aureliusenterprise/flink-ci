@@ -1,0 +1,9 @@
+#!/bin/bash
+
+USERNAME="admin"
+PASSWORD="admin"
+REQUEST_BODY='{"itemsToExport":[{"typeName":"m4i_data_domain","uniqueAttributes":{"qualifiedName":"test"}},{"typeName":"m4i_data_entity","uniqueAttributes":{"qualifiedName":"test"}},{"typeName":"m4i_data_attribute","uniqueAttributes":{"qualifiedName":"test"}}],"options":{"fetchType":"full","matchType":"contains"}}'
+FILE_NAME="atlas/export.zip"
+ATLAS_BASE_URL="http://localhost:21000/api/atlas"
+
+curl -g -v -L -u "${USERNAME}:${PASSWORD}" -d ${REQUEST_BODY} -H "Content-Type: application/json" -o ${FILE_NAME} ${ATLAS_BASE_URL}/admin/export

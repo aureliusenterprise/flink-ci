@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sys
@@ -6,6 +7,7 @@ from typing import TypedDict
 
 from elasticsearch import Elasticsearch
 from keycloak import KeycloakOpenID
+from m4i_atlas_core import ConfigStore
 from pyflink.common import Row, Types
 from pyflink.common.serialization import SimpleStringSchema
 from pyflink.datastream import StreamExecutionEnvironment
@@ -52,6 +54,7 @@ class SynchronizeAppSearchConfig(TypedDict):
         The Kafka topic name from which data will be consumed.
     """
 
+    atlas_server_url: str
     elasticsearch_app_search_index_name: str
     elasticsearch_state_index_name: str
     elasticsearch_endpoint: str
@@ -98,7 +101,7 @@ def main(config: SynchronizeAppSearchConfig) -> None:
     )
 
     # Set up the Kafka sink
-    kafka_sink = (
+    app_search_sink = (
         KafkaSink.builder()
         .set_bootstrap_servers(kafka_bootstrap_server)
         .set_record_serializer(
@@ -120,6 +123,19 @@ def main(config: SynchronizeAppSearchConfig) -> None:
         .build()
     )
 
+    error_sink = (
+        KafkaSink.builder()
+        .set_bootstrap_servers(kafka_bootstrap_server)
+        .set_record_serializer(
+            KafkaRecordSerializationSchema.builder()
+            .set_topic(config["kafka_error_topic_name"])
+            .set_value_serialization_schema(SimpleStringSchema())
+            .build(),
+        )
+        .set_delivery_guarantee(DeliveryGuarantee.AT_LEAST_ONCE)
+        .build()
+    )
+
     def create_elasticsearch_client() -> Elasticsearch:
         """Create an Elasticsearch client instance."""
         return Elasticsearch(
@@ -135,6 +151,15 @@ def main(config: SynchronizeAppSearchConfig) -> None:
             realm_name=config["keycloak_realm_name"],
             client_secret_key=config.get("keycloak_client_secret_key"),
         )
+
+    config_store = ConfigStore.get_instance()
+    config_store.set_many(
+        **{
+            "atlas.server.url": config["atlas_server_url"],
+            "atlas.credentials.username": config["keycloak_username"],
+            "atlas.credentials.password": config["keycloak_password"],
+        },
+    )
 
     input_stream = env.add_source(kafka_consumer).name("Kafka Source")
 
@@ -163,7 +188,17 @@ def main(config: SynchronizeAppSearchConfig) -> None:
             id=document[0],
             value=document[1] if document[1] is None else document[1].to_json(),
         ),
-    ).sink_to(kafka_sink).name("Kafka Sink")
+    ).sink_to(app_search_sink).name("Kafka Sink")
+
+    get_entity.errors.union(
+        publish_state.errors,
+        determine_change.errors,
+        synchronize_app_search.errors,
+    ).map(
+        lambda err: json.dumps({"errror": type(err).__name__, "message": str(err)}), Types.STRING(),
+    ).sink_to(
+        error_sink,
+    ).name("Error Sink")
 
     env.execute("Synchronize App Search")
 
@@ -173,6 +208,7 @@ if __name__ == "__main__":
     Entry point of the script. Load configuration from environment variables and start the job.
     """
     config: SynchronizeAppSearchConfig = {
+        "atlas_server_url": os.environ["ATLAS_SERVER_URL"],
         "elasticsearch_app_search_index_name": os.environ["ELASTICSEARCH_APP_SEARCH_INDEX_NAME"],
         "elasticsearch_state_index_name": os.environ["ELASTICSEARCH_STATE_INDEX_NAME"],
         "elasticsearch_endpoint": os.environ["ELASTICSEARCH_ENDPOINT"],
@@ -186,7 +222,7 @@ if __name__ == "__main__":
         "kafka_producer_group_id": os.environ["KAFKA_PRODUCER_GROUP_ID"],
         "kafka_source_topic_name": os.environ["KAFKA_SOURCE_TOPIC_NAME"],
         "keycloak_client_id": os.environ["KEYCLOAK_CLIENT_ID"],
-        "keycloak_client_secret_key": os.environ["KEYCLOAK_CLIENT_SECRET_KEY"],
+        "keycloak_client_secret_key": os.environ.get("KEYCLOAK_CLIENT_SECRET_KEY"),
         "keycloak_password": os.environ["KEYCLOAK_PASSWORD"],
         "keycloak_realm_name": os.environ["KEYCLOAK_REALM_NAME"],
         "keycloak_server_url": os.environ["KEYCLOAK_SERVER_URL"],

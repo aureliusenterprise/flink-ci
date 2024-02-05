@@ -7,7 +7,9 @@ services:
     environment:
       FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
+      ATLAS_SERVER_URL: "http://localhost:21000/api/atlas"
       ELASTICSEARCH_APP_SEARCH_INDEX_NAME: "app_search_documents"
+      ELASTICSEARCH_STATE_INDEX_NAME: "document_history"
       ELASTICSEARCH_USERNAME: "user"
       ELASTICSEARCH_PASSWORD: "password"
       ELASTICSEARCH_ENDPOINT: "http://localhost:9200"
@@ -17,7 +19,7 @@ services:
       KAFKA_CONSUMER_GROUP_ID: "13"
       KAFKA_PRODUCER_GROUP_ID: "13"
       KAFKA_ERROR_TOPIC_NAME: "DEAD_LETTER_BOX"
-      KAFKA_SOURCE_TOPIC_NAME: "ENRICHED_ENTITIES"
+      KAFKA_SOURCE_TOPIC_NAME: "ATLAS_ENTITIES"
       KEYCLOAK_CLIENT_ID: "atlas"
       KEYCLOAK_PASSWORD: "admin"
       KEYCLOAK_REALM_NAME: "m4i"

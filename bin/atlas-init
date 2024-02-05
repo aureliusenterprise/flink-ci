@@ -1,0 +1,4 @@
+#!/bin/bash
+
+atlas-import-types
+atlas-import-entities

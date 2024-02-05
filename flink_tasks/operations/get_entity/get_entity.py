@@ -55,7 +55,7 @@ class GetEntityFunction(MapFunction):
         self._access_token = None
         self._token_expiration = datetime.now(tz=timezone.utc)
 
-    def open(self, runtime_context: RuntimeContext) -> None:  # noqa: A003, ARG002
+    def open(self, runtime_context: RuntimeContext) -> None:  # noqa: ARG002
         """Initialize the keycloak instance using the provided keycloak factory."""
         self.keycloak = self.keycloak_factory()
         self.loop = asyncio.new_event_loop()
@@ -64,7 +64,7 @@ class GetEntityFunction(MapFunction):
         """Close the event loop."""
         self.loop.close()
 
-    def map(self, value: str) -> AtlasChangeMessage | tuple[OutputTag, Exception]:  # noqa: A003
+    def map(self, value: str) -> AtlasChangeMessage | tuple[OutputTag, Exception]:
         """
         Process the incoming message and enrich it with entity details.
 
@@ -105,7 +105,7 @@ class GetEntityFunction(MapFunction):
                 ),
             )
         except (HTTPError, KeycloakError) as e:
-            return ENTITY_LOOKUP_ERROR_TAG, RuntimeError(str(e))
+            return ENTITY_LOOKUP_ERROR_TAG, e
 
         change_message.message.entity = entity_details
 
