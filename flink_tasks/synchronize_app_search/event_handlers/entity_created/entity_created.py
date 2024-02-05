@@ -87,12 +87,12 @@ def get_breadcrumbs_of_entity(
     first_parent_guid = [x.guid for x in input_entity.get_parents()][:1]
     breadcrumb_name, breadcrumb_guid, breadcrumb_type = [], [], []
     # Look up breadcrumbs of parents
-    query = {"query": {"terms": {"breadcrumb_guid": first_parent_guid}}}
+    query = {"query": {"terms": {"guid": first_parent_guid}}}
 
     for document in get_documents(query, elastic, index_name):
-        breadcrumb_name += [*document.breadcrumbname, document.name]
-        breadcrumb_guid += [*document.breadcrumbguid, document.guid]
-        breadcrumb_type += [*document.breadcrumbtype, document.typename]
+        breadcrumb_name = [*document.breadcrumbname, document.name]
+        breadcrumb_guid = [*document.breadcrumbguid, document.guid]
+        breadcrumb_type = [*document.breadcrumbtype, document.typename]
 
     return breadcrumb_name, breadcrumb_guid, breadcrumb_type
 
@@ -141,6 +141,52 @@ def create_derived_relations(
         yield document
 
 
+def update_children_breadcrumb(  # noqa: PLR0913
+    entity_details: Entity,
+    elastic: Elasticsearch,
+    index_name: str,
+    b_names: list[str],
+    b_guids: list[str],
+    b_types: list[str],
+) -> Generator[AppSearchDocument, None, None]:
+    """
+    Update the breadcrumb of the created entity's children.
+
+    Parameters
+    ----------
+    entity_details: Entity
+        Details of the main entity for which derived relations are created.
+    elastic: Elasticsearch
+        Elasticsearch client for querying documents.
+    index_name: str
+        Name of the Elasticsearch index containing the relevant documents.
+    b_names: list[str]
+        Breadcrumb names of the parent of the main entity
+    b_guids: list[str]
+        Breadcrumb guids of the parent of the main entity
+    b_types: list[str]
+        Breadcrumb types of the parent of the main entity
+
+    Returns
+    -------
+    Generator[AppSearchDocument, None, None]
+        A generator yielding AppSearchDocument objects representing the updated children.
+    """
+    # A list of children of the main entity
+    list_of_children = [x.guid for x in entity_details.get_children()]
+    # Find all documents that reference immediate children of the main entity in their breadcrumb
+    query = {"query": {"terms": {"breadcrumb_guid": list_of_children}}}
+    # Get name of the main entity
+    attributes: dict[str, str] = cast(dict, entity_details.attributes.unmapped_attributes)
+    name = attributes.get("name", attributes["qualifiedName"])
+    # Set the breadcrumbs of all children
+    for document in get_documents(query, elastic, index_name):
+        document.breadcrumbname = [*b_names, name, *document.breadcrumbname]
+        document.breadcrumbguid = [*b_guids, entity_details.guid, *document.breadcrumbguid]
+        document.breadcrumbtype = [*b_types, entity_details.type_name, *document.breadcrumbtype]
+        yield document
+
+
 def default_create_handler(
     entity_details: Entity,
     elastic: Elasticsearch,
@@ -185,8 +231,26 @@ def default_create_handler(
             unmapped: dict[str, str] = cast(dict, unique.unmapped_attributes)
             # Set qualified_name as fallback value
             references.setdefault(key, []).append(unmapped.get("name", unique.qualified_name))
-
+    # Query related entities
     related = list(create_derived_relations(referred_guids, entity_details, elastic, index_name))
+    # Query children entities
+    appsearch_children = list(
+        update_children_breadcrumb(entity_details, elastic, index_name, b_names, b_guids, b_types),
+    )
+    # Get entities that are both children and related
+    intersection_guids = {doc.guid for doc in related} & {doc.guid for doc in appsearch_children}
+    # Create a dictionary from related entities
+    related_dict = {doc.guid: doc for doc in related}
+    # Merge related entities and children entities
+    for child in appsearch_children:
+        if child.guid in intersection_guids:
+            related_doc = related_dict[child.guid]
+            related_doc.breadcrumbname = child.breadcrumbname
+            related_doc.breadcrumbguid = child.breadcrumbguid
+            related_doc.breadcrumbtype = child.breadcrumbtype
+
+    related = list(related_dict.values()) + \
+        [child for child in appsearch_children if child.guid not in intersection_guids]
 
     related.insert(
         0,
