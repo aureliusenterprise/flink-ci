@@ -362,11 +362,14 @@ def test__handle_entity_created_children_breadcrumb() -> None:
             "flink_tasks.synchronize_app_search.event_handlers.entity_created.entity_created.get_documents",
             return_value=[child_relation],
     ):
-        result = list(update_children_breadcrumb(
-            data_entity, Mock(), "test_index", ["Parent name"], ["Parent id"], ["Parent type"],
-        ))
+        breadcrumbs = {
+            "breadcrumbname":["Parent Name"],
+            "breadcrumbguid":["Parent idD"],
+            "breadcrumbtype":["Parent type"],
+        }
+        result = list(update_children_breadcrumb(data_entity, Mock(), "test_index", breadcrumbs))
 
         # Assert children received the main entity and its parent entities breadcrumb information
-        assert result[0].breadcrumbname == ["Parent name", "Test Entity"]
-        assert result[0].breadcrumbguid == ["Parent id", "1111"]
+        assert result[0].breadcrumbname == ["Parent Name", "Test Entity"]
+        assert result[0].breadcrumbguid == ["Parent idD", "1111"]
         assert result[0].breadcrumbtype == ["Parent type", "m4i_data_entity"]
