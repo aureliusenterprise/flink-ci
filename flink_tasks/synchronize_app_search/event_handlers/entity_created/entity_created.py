@@ -235,22 +235,18 @@ def default_create_handler(
     related = list(create_derived_relations(referred_guids, entity_details, elastic, index_name))
     # Query children entities
     appsearch_children = list(
-        update_children_breadcrumb(entity_details, elastic, index_name, b_names, b_guids, b_types),
+        update_children_breadcrumb(entity_details, elastic, index_name, b_names, b_guids, b_types)
     )
-    # Get entities that are both children and related
-    intersection_guids = {doc.guid for doc in related} & {doc.guid for doc in appsearch_children}
     # Create a dictionary from related entities
     related_dict = {doc.guid: doc for doc in related}
     # Merge related entities and children entities
     for child in appsearch_children:
-        if child.guid in intersection_guids:
-            related_doc = related_dict[child.guid]
-            related_doc.breadcrumbname = child.breadcrumbname
-            related_doc.breadcrumbguid = child.breadcrumbguid
-            related_doc.breadcrumbtype = child.breadcrumbtype
+        related_doc = related_dict[child.guid]
+        related_doc.breadcrumbname = child.breadcrumbname
+        related_doc.breadcrumbguid = child.breadcrumbguid
+        related_doc.breadcrumbtype = child.breadcrumbtype
 
-    related = list(related_dict.values()) + \
-        [child for child in appsearch_children if child.guid not in intersection_guids]
+    related = list(related_dict.values())
 
     related.insert(
         0,
