@@ -232,24 +232,27 @@ def update_existing_documents(
             referenced_names.setdefault(key, []).append(unmapped.get("name", unique.qualified_name))
 
     # Query related entities
-    related_entities = list(
-        create_derived_relations(entity_details, elastic, index_name, referenced_guids),
-    )
-
-    # Query children entities
+    related = list(create_derived_relations(entity_details, elastic, index_name, referenced_guids))
+    # Query all children entities
     appsearch_children = list(
         update_children_breadcrumb(entity_details, elastic, index_name, breadcrumbs),
     )
     # Create a dictionary from related entities
-    related_dict = {doc.guid: doc for doc in related_entities}
+    related_dict = {doc.guid: doc for doc in related}
     # Merge related entities and children entities
     for child in appsearch_children:
-        related_doc = related_dict[child.guid]
-        related_doc.breadcrumbname = child.breadcrumbname
-        related_doc.breadcrumbguid = child.breadcrumbguid
-        related_doc.breadcrumbtype = child.breadcrumbtype
+        # Is child related to the main entity
+        if child.guid in related_dict:
+            related_doc = related_dict[child.guid]
+            related_doc.breadcrumbname = child.breadcrumbname
+            related_doc.breadcrumbguid = child.breadcrumbguid
+            related_doc.breadcrumbtype = child.breadcrumbtype
 
-    return list(related_dict.values()), referenced_guids | referenced_names
+    # Merge related entities and all children entities
+    related = list(related_dict.values()) + \
+        [child for child in appsearch_children if child.guid not in related_dict]
+
+    return related, referenced_guids | referenced_names
 
 
 def default_create_handler(
