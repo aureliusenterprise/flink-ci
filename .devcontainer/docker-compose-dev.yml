@@ -32,6 +32,7 @@ services:
       - ..:/workspace:cached
       - atlas-config:/tmp/atlas-config
       - keycloak-config:/tmp/keycloak-config
+      - keycloak-settings:/tmp/keycloak-settings
       - checkpoints:/tmp/flink-checkpoints-directory
 
   pyflink-jobmanager:
@@ -50,4 +51,5 @@ services:
 volumes:
   atlas-config:
   keycloak-config:
+  keycloak-settings:
   checkpoints:
