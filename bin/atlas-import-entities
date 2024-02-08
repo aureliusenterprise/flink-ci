@@ -1,8 +1,6 @@
 #!/bin/bash
 
-USERNAME="admin"
-PASSWORD="admin"
 FILE_NAME="atlas/export.zip"
 ATLAS_BASE_URL="http://localhost:21000/api/atlas"
 
-curl -g -v -L -u "${USERNAME}:${PASSWORD}" -H "Content-Type: multipart/form-data" -H "Cache-Control: no-cache" -F "data=@${FILE_NAME}" "${ATLAS_BASE_URL}/admin/import"
+curl -g -v -L -H "Authorization: bearer ${TOKEN}" -H "Content-Type: multipart/form-data" -H "Cache-Control: no-cache" -F "data=@${FILE_NAME}" "${ATLAS_BASE_URL}/admin/import"

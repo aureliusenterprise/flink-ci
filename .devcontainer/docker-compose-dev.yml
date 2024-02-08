@@ -20,10 +20,10 @@ services:
       KAFKA_PRODUCER_GROUP_ID: "13"
       KAFKA_ERROR_TOPIC_NAME: "DEAD_LETTER_BOX"
       KAFKA_SOURCE_TOPIC_NAME: "ATLAS_ENTITIES"
-      KEYCLOAK_CLIENT_ID: "atlas"
+      KEYCLOAK_CLIENT_ID: "m4i_atlas"
       KEYCLOAK_PASSWORD: "admin"
-      KEYCLOAK_REALM_NAME: "m4i"
-      KEYCLOAK_SERVER_URL: "http://localhost:8080/auth"
+      KEYCLOAK_REALM_NAME: "atlas-dev"
+      KEYCLOAK_SERVER_URL: "http://localhost:8180/auth/"
       KEYCLOAK_USERNAME: "admin"
     command: "taskmanager --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
     cap_add:
@@ -31,6 +31,7 @@ services:
     volumes:
       - ..:/workspace:cached
       - atlas-config:/tmp/atlas-config
+      - keycloak-config:/tmp/keycloak-config
       - checkpoints:/tmp/flink-checkpoints-directory
 
   pyflink-jobmanager:
@@ -48,5 +49,5 @@ services:
 
 volumes:
   atlas-config:
-  code:
-  # kibanadata:
+  keycloak-config:
+  checkpoints:

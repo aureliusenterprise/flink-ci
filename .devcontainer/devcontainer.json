@@ -54,7 +54,9 @@
 		8081,
 		8082,
 		8083,
+		8180,
 		9200,
+		10090,
 		21000
 	],
 	"portsAttributes": {
@@ -73,6 +75,9 @@
 		},
 		"8083": {
 			"label": "Kafka Connect API"
+		},
+		"8180": {
+			"label": "Keycloak"
 		},
 		"9200": {
 			"label": "Elasticsearch API"
