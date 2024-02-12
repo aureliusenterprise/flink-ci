@@ -1,5 +1,5 @@
 from collections.abc import Generator
-from typing import cast
+from typing import Any, cast
 
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
@@ -62,7 +62,7 @@ def get_breadcrumbs_of_entity(
     input_entity: Entity,
     elastic: Elasticsearch,
     index_name: str,
-) -> tuple[list[str], list[str], list[str]]:
+) -> dict[str, Any]:
     """
     Extract parent entity breadcrumbs based on the provided input_entity.
 
@@ -77,52 +77,58 @@ def get_breadcrumbs_of_entity(
 
     Returns
     -------
-    tuple[list[str], list[str], list[str]]
-        A tuple containing lists of updated breadcrumb details - name, GUID, and type.
+    dict[str, Any]
+        A dict containing updated breadcrumb details - name, GUID, and type.
     """
-    if input_entity is None:
-        return [], [], []
-
+    attributes: dict[str, Any] = cast(dict, input_entity.attributes.unmapped_attributes)
+    # set default values
+    attributes.update({"breadcrumbname": [],"breadcrumbguid": [],"breadcrumbtype": []})
     # Get the first parent of the entity
     first_parent_guid = [x.guid for x in input_entity.get_parents()][:1]
-    breadcrumb_name, breadcrumb_guid, breadcrumb_type = [], [], []
     # Look up breadcrumbs of parents
-    query = {"query": {"terms": {"breadcrumb_guid": first_parent_guid}}}
+    query = {"query": {"terms": {"guid": first_parent_guid}}}
 
     for document in get_documents(query, elastic, index_name):
-        breadcrumb_name += [*document.breadcrumbname, document.name]
-        breadcrumb_guid += [*document.breadcrumbguid, document.guid]
-        breadcrumb_type += [*document.breadcrumbtype, document.typename]
+        attributes.update({
+            "breadcrumbname": [*document.breadcrumbname, document.name],
+            "breadcrumbguid": [*document.breadcrumbguid, document.guid],
+            "breadcrumbtype": [*document.breadcrumbtype, document.typename],
+        })
 
-    return breadcrumb_name, breadcrumb_guid, breadcrumb_type
+    return attributes
 
 
 def create_derived_relations(
-    related_guids: list[str],
     entity_details: Entity,
     elastic: Elasticsearch,
     index_name: str,
+    referenced: dict[str, list],
 ) -> Generator[AppSearchDocument, None, None]:
     """
     Update existing `AppSearchDocument`s that represent entities related to the provided entity.
 
     Parameters
     ----------
-    related_guids : list[str]
-        List of GUIDs representing the related entities.
     entity_details: Entity
         Details of the main entity for which derived relations are created.
     elastic: Elasticsearch
         Elasticsearch client for querying documents.
     index_name: str
         Name of the Elasticsearch index containing the relevant documents.
+    referenced : dict[str, list]
+        GUIDs representing the related entities.
 
     Returns
     -------
     Generator[AppSearchDocument, None, None]
         A generator yielding AppSearchDocument objects representing the derived relations.
     """
-    query = {"query": {"terms": {"guid": related_guids}}}
+    # Extract guids
+    guids = []
+    for value in referenced.values():
+        guids.extend(value)
+    # Get all related entities of the main entity
+    query = {"query": {"terms": {"guid": guids}}}
 
     for document in get_documents(query, elastic, index_name):
         for key in RELATIONSHIP_MAP[entity_details.type_name]:
@@ -139,6 +145,114 @@ def create_derived_relations(
             guids.append(entity_details.guid)
             names.append(name)
         yield document
+
+
+def update_children_breadcrumb(
+    entity_details: Entity,
+    elastic: Elasticsearch,
+    index_name: str,
+    attr: dict[str, Any],
+) -> Generator[AppSearchDocument, None, None]:
+    """
+    Update the breadcrumb of the created entity's children.
+
+    Parameters
+    ----------
+    entity_details: Entity
+        Details of the main entity for which derived relations are created.
+    elastic: Elasticsearch
+        Elasticsearch client for querying documents.
+    index_name: str
+        Name of the Elasticsearch index containing the relevant documents.
+    attr: dict[str, Any]
+        A Dict object containing the breadcrumb information of the main entity
+
+    Returns
+    -------
+    Generator[AppSearchDocument, None, None]
+        A generator yielding AppSearchDocument objects representing the updated children.
+    """
+    # A list of children of the main entity
+    list_of_children = [x.guid for x in entity_details.get_children()]
+    # Find all documents that reference immediate children of the main entity in their breadcrumb
+    query = {"query": {"terms": {"breadcrumb_guid": list_of_children}}}
+    # Get name of the main entity
+    attributes: dict[str, str] = cast(dict, entity_details.attributes.unmapped_attributes)
+    name = attributes.get("name", attributes["qualifiedName"])
+    # Set the breadcrumbs of all children
+    for document in get_documents(query, elastic, index_name):
+        document.breadcrumbname = [*attr["breadcrumbname"], name, *document.breadcrumbname]
+        document.breadcrumbguid = [
+            *attr["breadcrumbguid"], entity_details.guid, *document.breadcrumbguid,
+        ]
+        document.breadcrumbtype = [
+            *attr["breadcrumbtype"], entity_details.type_name, *document.breadcrumbtype,
+        ]
+        yield document
+
+
+def update_existing_documents(
+    entity_details: Entity,
+    elastic: Elasticsearch,
+    index_name: str,
+    breadcrumbs: dict,
+) -> tuple[list[AppSearchDocument], dict[str, Any]]:
+    """
+    Update the children and related documents of the main entity.
+
+    Parameters
+    ----------
+    entity_details: Entity
+        Details of the main entity for which derived relations are created.
+    elastic: Elasticsearch
+        Elasticsearch client for querying documents.
+    index_name: str
+        Name of the Elasticsearch index containing the relevant documents.
+    breadcrumbs: tuple[list[AppSearchDocument], dict[str, list]]
+        It returns a combined list of related entities and child entities,
+        secondly it returns the names, and guids of the related entities.
+
+    Returns
+    -------
+    Generator[AppSearchDocument, None, None]
+        A generator yielding AppSearchDocument objects representing the updated children.
+    """
+    # Get referenced entities
+    referenced_guids, referenced_names = {}, {}
+
+    for ref in entity_details.get_referred_entities():
+        keys = RELATIONSHIP_MAP[ref.type_name]
+        for key in keys:
+            # Referenced entity's guid
+            referenced_guids.setdefault(key + "guid", []).append(ref.guid)
+            # Referenced entity's name
+            unique = cast(M4IAttributes, ref.unique_attributes)
+            unmapped: dict[str, str] = cast(dict, unique.unmapped_attributes)
+            # Set qualified_name as fallback value
+            referenced_names.setdefault(key, []).append(unmapped.get("name", unique.qualified_name))
+
+    # Query related entities
+    related = list(create_derived_relations(entity_details, elastic, index_name, referenced_guids))
+    # Query all children entities
+    appsearch_children = list(
+        update_children_breadcrumb(entity_details, elastic, index_name, breadcrumbs),
+    )
+    # Create a dictionary from related entities
+    related_dict = {doc.guid: doc for doc in related}
+    # Merge related entities and children entities
+    for child in appsearch_children:
+        # Is child related to the main entity
+        if child.guid in related_dict:
+            related_doc = related_dict[child.guid]
+            related_doc.breadcrumbname = child.breadcrumbname
+            related_doc.breadcrumbguid = child.breadcrumbguid
+            related_doc.breadcrumbtype = child.breadcrumbtype
+
+    # Merge related entities and all children entities
+    related = list(related_dict.values()) + \
+        [child for child in appsearch_children if child.guid not in related_dict]
+
+    return related, referenced_guids | referenced_names
 
 
 def default_create_handler(
@@ -163,32 +277,14 @@ def default_create_handler(
     AppSearchDocument
         List of AppSearchDocument instances representing the created entity and related entities.
     """
-    attributes: dict[str, str] = cast(dict, entity_details.attributes.unmapped_attributes)
-
+    # Set attributes of the main entity
+    attributes: dict = get_breadcrumbs_of_entity(entity_details, elastic, index_name)
     qualified_name = attributes["qualifiedName"]
     name = attributes.get("name", qualified_name)
-
-    # Get breadcrumbs
-    b_names, b_guids, b_types = get_breadcrumbs_of_entity(entity_details, elastic, index_name)
-
-    # Get referenced entities
-    references, referred_guids = {}, []
-
-    for ref in entity_details.get_referred_entities():
-        keys = RELATIONSHIP_MAP[ref.type_name]
-        for key in keys:
-            # Referenced entity's guid
-            references.setdefault(key + "guid", []).append(ref.guid)
-            referred_guids.append(ref.guid)
-            # Referenced entity's name
-            unique = cast(M4IAttributes, ref.unique_attributes)
-            unmapped: dict[str, str] = cast(dict, unique.unmapped_attributes)
-            # Set qualified_name as fallback value
-            references.setdefault(key, []).append(unmapped.get("name", unique.qualified_name))
-
-    related = list(create_derived_relations(referred_guids, entity_details, elastic, index_name))
-
-    related.insert(
+    # Update children and related entities of the main entity
+    docs, references = update_existing_documents(entity_details, elastic, index_name, attributes)
+    # Merge
+    docs.insert(
         0,
         AppSearchDocument(
             id=entity_details.guid,
@@ -196,14 +292,14 @@ def default_create_handler(
             typename=entity_details.type_name,
             name=name,
             referenceablequalifiedname=qualified_name,
-            breadcrumbname=b_names,
-            breadcrumbguid=b_guids,
-            breadcrumbtype=b_types,
+            breadcrumbname=attributes["breadcrumbname"],
+            breadcrumbguid=attributes["breadcrumbguid"],
+            breadcrumbtype=attributes["breadcrumbtype"],
             **references,
         ),
     )
 
-    return related
+    return docs
 
 
 def create_person_handler(

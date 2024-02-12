@@ -13,7 +13,11 @@ from m4i_atlas_core import (
 
 from flink_tasks import AppSearchDocument, EntityMessage, EntityMessageType
 
-from .entity_created import EntityDataNotProvidedError, handle_entity_created
+from .entity_created import (
+    EntityDataNotProvidedError,
+    handle_entity_created,
+    update_children_breadcrumb,
+)
 
 
 def test__default_create_handler_with_complete_details() -> None:
@@ -240,20 +244,20 @@ def test__handle_entity_created_add_relations() -> None:
     )
 
     with patch(
-            "flink_tasks.synchronize_app_search.event_handlers.entity_created.entity_created.get_documents",
-            return_value=[related_document],
-        ):
-            result = handle_entity_created(entity_message, Mock(), "test_index")
+        "flink_tasks.synchronize_app_search.event_handlers.entity_created.entity_created.get_documents",
+        return_value=[related_document],
+    ):
+        result = handle_entity_created(entity_message, Mock(), "test_index")
 
-            document = result[0]
+        document = result[0]
 
-            assert document.deriveddatadomainguid == ["2222"]
-            assert document.deriveddatadomain == ["My Data Domain"]
+        assert document.deriveddatadomainguid == ["2222"]
+        assert document.deriveddatadomain == ["My Data Domain"]
 
-            related_document = result[1]
+        related_document = result[1]
 
-            assert related_document.deriveddataentityguid == ["1111"]
-            assert related_document.deriveddataentity == ["test entity"]
+        assert related_document.deriveddataentityguid == ["1111"]
+        assert related_document.deriveddataentity == ["test entity"]
 
 
 def test__handle_entity_created_multiple_relations() -> None:
@@ -324,3 +328,51 @@ def test__handle_entity_created_multiple_relations() -> None:
         assert result[1].deriveddataentity == ["Test Entity"]
         assert result[2].deriveddataentityguid == ["1111"]
         assert result[2].deriveddataentity == ["Test Entity"]
+
+
+def test__handle_entity_created_children_breadcrumb() -> None:
+    """Verify that the breadcrumb of children are updated."""
+    data_entity = BusinessDataEntity(
+        guid="1111",
+        type_name="m4i_data_entity",
+        attributes=BusinessDataEntityAttributes.from_dict({
+            "qualifiedName": "1111-data-entity",
+            "name": "Test Entity",
+            "unmapped_attributes": {"qualifiedName": "1111-data-entity", "name": "Test Entity"},
+        }),
+    )
+
+    data_entity.attributes.attributes = [ObjectId(
+        guid="3333",
+        type_name="m4i_data_attribute",
+        unique_attributes=M4IAttributes(
+            qualified_name="3333-attribute",
+            unmapped_attributes={"name": "Test Data Attribute"},
+        ),
+    )]
+
+    child_relation = AppSearchDocument(
+        guid="3333",
+        typename="m4i_data_attribute",
+        name="Test Data Attribute",
+        referenceablequalifiedname="data_attribute_name",
+        breadcrumbname=["Child name"],
+        breadcrumbguid=["Child guid"],
+        breadcrumbtype=["Child type"],
+    )
+
+    with patch(
+            "flink_tasks.synchronize_app_search.event_handlers.entity_created.entity_created.get_documents",
+            return_value=[child_relation],
+    ):
+        breadcrumbs = {
+            "breadcrumbname": ["Parent Name"],
+            "breadcrumbguid": ["Parent idD"],
+            "breadcrumbtype": ["Parent type"],
+        }
+        result = list(update_children_breadcrumb(data_entity, Mock(), "test_index", breadcrumbs))
+
+        # Assert children received the main entity and its parent entities breadcrumb information
+        assert result[0].breadcrumbname == ["Parent Name", "Test Entity", "Child name"]
+        assert result[0].breadcrumbguid == ["Parent idD", "1111", "Child guid"]
+        assert result[0].breadcrumbtype == ["Parent type", "m4i_data_entity", "Child type"]
