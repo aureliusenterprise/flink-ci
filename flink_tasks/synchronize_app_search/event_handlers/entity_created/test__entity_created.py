@@ -356,6 +356,9 @@ def test__handle_entity_created_children_breadcrumb() -> None:
         typename="m4i_data_attribute",
         name="Test Data Attribute",
         referenceablequalifiedname="data_attribute_name",
+        breadcrumbname=["Child name"],
+        breadcrumbguid=["Child guid"],
+        breadcrumbtype=["Child type"],
     )
 
     with patch(
@@ -363,13 +366,13 @@ def test__handle_entity_created_children_breadcrumb() -> None:
             return_value=[child_relation],
     ):
         breadcrumbs = {
-            "breadcrumbname":["Parent Name"],
-            "breadcrumbguid":["Parent idD"],
-            "breadcrumbtype":["Parent type"],
+            "breadcrumbname": ["Parent Name"],
+            "breadcrumbguid": ["Parent idD"],
+            "breadcrumbtype": ["Parent type"],
         }
         result = list(update_children_breadcrumb(data_entity, Mock(), "test_index", breadcrumbs))
 
         # Assert children received the main entity and its parent entities breadcrumb information
-        assert result[0].breadcrumbname == ["Parent Name", "Test Entity"]
-        assert result[0].breadcrumbguid == ["Parent idD", "1111"]
-        assert result[0].breadcrumbtype == ["Parent type", "m4i_data_entity"]
+        assert result[0].breadcrumbname == ["Parent Name", "Test Entity", "Child name"]
+        assert result[0].breadcrumbguid == ["Parent idD", "1111", "Child guid"]
+        assert result[0].breadcrumbtype == ["Parent type", "m4i_data_entity", "Child type"]
