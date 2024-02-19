@@ -4,11 +4,18 @@ from datetime import datetime, timedelta, timezone
 from typing import cast
 
 from aiohttp.web import HTTPError
-from keycloak import KeycloakError, KeycloakOpenID
-from m4i_atlas_core import AtlasChangeMessage, get_entity_by_guid
+from m4i_atlas_core import (
+    AtlasChangeMessage,
+    ConfigStore,
+    data_dictionary_entity_types,
+    get_entity_by_guid,
+    register_atlas_entity_types,
+)
 from marshmallow import ValidationError
 from pyflink.datastream import DataStream, OutputTag
 from pyflink.datastream.functions import MapFunction, RuntimeContext
+
+from keycloak import KeycloakError, KeycloakOpenID
 
 # Define output tags for errors that can occur during processing.
 ENTITY_LOOKUP_ERROR_TAG = OutputTag("entity_lookup_error")
@@ -28,6 +35,8 @@ class GetEntityFunction(MapFunction):
 
     Attributes
     ----------
+    atlas_url : str
+        The URL of the Apache Atlas API.
     keycloak_factory : KeycloakFactory
         A factory function to produce instances of KeycloakOpenID.
     credentials : tuple[str, str]
@@ -38,17 +47,25 @@ class GetEntityFunction(MapFunction):
         The event loop used for asynchronous tasks.
     """
 
-    def __init__(self, keycloak_factory: KeycloakFactory, credentials: tuple[str, str]) -> None:
+    def __init__(
+        self,
+        atlas_url: str,
+        keycloak_factory: KeycloakFactory,
+        credentials: tuple[str, str],
+    ) -> None:
         """
         Initialize the GetEntityFunction with a Keycloak factory and credentials.
 
         Parameters
         ----------
+        atlas_url : str
+            The URL of the Apache Atlas API.
         keycloak_factory : KeycloakFactory
             A factory function to produce instances of KeycloakOpenID.
         credentials : tuple[str, str]
             A tuple containing the client_id and client_secret for authentication.
         """
+        self.atlas_url = atlas_url
         self.credentials = credentials
         self.keycloak_factory = keycloak_factory
 
@@ -59,6 +76,11 @@ class GetEntityFunction(MapFunction):
         """Initialize the keycloak instance using the provided keycloak factory."""
         self.keycloak = self.keycloak_factory()
         self.loop = asyncio.new_event_loop()
+
+        store = ConfigStore.get_instance()
+        store.set("atlas.server.url", self.atlas_url)
+
+        register_atlas_entity_types(data_dictionary_entity_types)
 
     def close(self) -> None:
         """Close the event loop."""
@@ -99,7 +121,7 @@ class GetEntityFunction(MapFunction):
             entity_details = self.loop.run_until_complete(
                 get_entity_by_guid(
                     guid=entity.guid,
-                    type_name=entity.type_name,
+                    entity_type=entity.type_name,
                     access_token=self.access_token,
                     cache_read=False,
                 ),
@@ -165,6 +187,7 @@ class GetEntity:
     def __init__(
         self,
         data_stream: DataStream,
+        atlas_url: str,
         keycloak_factory: KeycloakFactory,
         credentials: tuple[str, str],
     ) -> None:
@@ -175,12 +198,16 @@ class GetEntity:
         ----------
         data_stream : DataStream
             The input data stream to be processed.
+        atlas_url : str
+            The URL of the Apache Atlas API.
+        keycloak_factory : KeycloakFactory
+            A factory function to produce instances of KeycloakOpenID.
         """
         self.data_stream = data_stream
 
-        self.main = self.data_stream.map(GetEntityFunction(keycloak_factory, credentials)).name(
-            "enriched_entities",
-        )
+        self.main = self.data_stream.map(
+            GetEntityFunction(atlas_url, keycloak_factory, credentials),
+        ).name("enriched_entities")
 
         self.entity_lookup_errors = self.main.get_side_output(ENTITY_LOOKUP_ERROR_TAG).name(
             "entity_lookup_errors",

@@ -20,7 +20,9 @@
 		"ghcr.io/devcontainers/features/python:1": {},
 		"ghcr.io/devcontainers-contrib/features/poetry:2": {},
 		"ghcr.io/devcontainers-contrib/features/ruff:1": {},
-		"ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {},
+		"ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
+			"packages": "gdb"
+		},
 		"ghcr.io/paul-gilber/devcontainer-features/jinja2-cli-homebrew:1": {}
 	},
 	"updateContentCommand": "bash .devcontainer/updatecontent.sh",
@@ -30,7 +32,7 @@
 		"vscode": {
 			"settings": {
 				"editor.codeActionsOnSave": {
-					"source.fixAll": true
+					"source.fixAll": "explicit"
 				},
 				"elastic.showResultAsDocument": true,
 				"python.analysis.enabled": true,
@@ -86,5 +88,4 @@
 			"label": "Apache Atlas"
 		}
 	}
-
 }

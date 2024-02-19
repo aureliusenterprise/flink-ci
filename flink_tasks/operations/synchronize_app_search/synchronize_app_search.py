@@ -62,7 +62,7 @@ class SynchronizeAppSearchFunction(MapFunction):
         self.elastic_factory = elastic_factory
         self.index_name = index_name
 
-    def open(self, runtime_context: RuntimeContext) -> None:  # noqa: A003, ARG002
+    def open(self, runtime_context: RuntimeContext) -> None:  # noqa: ARG002
         """
         Initialize the Elasticsearch client. This method is called when the function is opened.
 
@@ -73,7 +73,7 @@ class SynchronizeAppSearchFunction(MapFunction):
         """
         self.elastic = self.elastic_factory()
 
-    def map(  # noqa: A003
+    def map(
         self,
         value: EntityMessage,
     ) -> list[tuple[str, AppSearchDocument | None]] | tuple[OutputTag, Exception]:

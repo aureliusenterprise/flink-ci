@@ -171,10 +171,8 @@ def default_create_handler(
     AppSearchDocument
         List of AppSearchDocument instances representing the created entity and related entities.
     """
-    attributes: dict[str, str] = cast(dict, entity_details.attributes.unmapped_attributes)
-
-    qualified_name = attributes["qualifiedName"]
-    name = attributes.get("name", qualified_name)
+    qualified_name = getattr(entity_details.attributes, "qualified_name", entity_details.guid)
+    name = getattr(entity_details.attributes, "name", qualified_name)
 
     # Get breadcrumbs
     b_names, b_guids, b_types = get_breadcrumbs_of_entity(entity_details, elastic, index_name)

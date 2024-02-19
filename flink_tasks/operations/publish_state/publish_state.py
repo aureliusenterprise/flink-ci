@@ -4,7 +4,6 @@ from .operations import (
     ElasticsearchFactory,
     GetPreviousEntity,
     PrepareNotificationToIndex,
-    ValidateKafkaNotifications,
 )
 
 
@@ -14,7 +13,6 @@ class PublishState:
 
     This class initializes the various processing stages, including:
 
-    - Validation of input Kafka notifications
     - Retrieving previous entity versions from Elasticsearch
     - Preparing the validated notifications for indexing.
 
@@ -22,8 +20,6 @@ class PublishState:
     ----------
     data_stream : DataStream
         The input Kafka notifications stream.
-    input_validation : ValidateKafkaNotifications
-        Stage for validating input Kafka notifications.
     previous_entity_retrieval : GetPreviousEntity
         Stage for retrieving the previous entity versions from Elasticsearch.
     index_preparation : PrepareNotificationToIndex
@@ -49,20 +45,17 @@ class PublishState:
         """
         self.data_stream = data_stream
 
-        # Initialize the validation stage for input Kafka notifications.
-        self.input_validation = ValidateKafkaNotifications(self.data_stream)
-
         # Initialize the stage for retrieving the previous entity versions from a database.
         self.previous_entity_retrieval = GetPreviousEntity(
-            self.input_validation.main, elastic_factory, index_name,
+            self.data_stream, elastic_factory, index_name,
         )
 
         # Initialize the stage for preparing the validated notifications for indexing.
         self.index_preparation = PrepareNotificationToIndex(
-            self.input_validation.main,
+            self.data_stream,
         )
 
         # Aggregate the errors from the various processing stages.
-        self.errors = self.input_validation.errors.union(
+        self.errors = self.index_preparation.errors.union(
             self.previous_entity_retrieval.errors,
         )

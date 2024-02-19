@@ -6,9 +6,7 @@ from pathlib import Path
 from typing import TypedDict
 
 from elasticsearch import Elasticsearch
-from keycloak import KeycloakOpenID
-from m4i_atlas_core import ConfigStore
-from pyflink.common import Row, Types
+from pyflink.common import Types
 from pyflink.common.serialization import SimpleStringSchema
 from pyflink.datastream import StreamExecutionEnvironment
 from pyflink.datastream.connectors.kafka import (
@@ -17,9 +15,9 @@ from pyflink.datastream.connectors.kafka import (
     KafkaRecordSerializationSchema,
     KafkaSink,
 )
-from pyflink.datastream.formats.json import JsonRowSerializationSchema
 
 from flink_tasks import DetermineChange, GetEntity, PublishState, SynchronizeAppSearch
+from keycloak import KeycloakOpenID
 
 
 class SynchronizeAppSearchConfig(TypedDict):
@@ -56,11 +54,12 @@ class SynchronizeAppSearchConfig(TypedDict):
 
     atlas_server_url: str
     elasticsearch_app_search_index_name: str
-    elasticsearch_state_index_name: str
+    elasticsearch_publish_state_index_name: str
     elasticsearch_endpoint: str
     elasticsearch_username: str
     elasticsearch_password: str
     kafka_app_search_topic_name: str
+    kafka_publish_state_topic_name: str
     kafka_bootstrap_server_hostname: str
     kafka_bootstrap_server_port: str
     kafka_consumer_group_id: str
@@ -108,14 +107,28 @@ def main(config: SynchronizeAppSearchConfig) -> None:
             KafkaRecordSerializationSchema.builder()
             .set_topic(config["kafka_app_search_topic_name"])
             .set_key_serialization_schema(
-                JsonRowSerializationSchema.Builder()
-                .with_type_info(Types.ROW_NAMED(["id"], [Types.STRING()]))
-                .build(),
+                SimpleStringSchema(),
             )
             .set_value_serialization_schema(
-                JsonRowSerializationSchema.Builder()
-                .with_type_info(Types.ROW_NAMED(["id", "value"], [Types.STRING(), Types.STRING()]))
-                .build(),
+                SimpleStringSchema(),
+            )
+            .build(),
+        )
+        .set_delivery_guarantee(DeliveryGuarantee.AT_LEAST_ONCE)
+        .build()
+    )
+
+    publish_state_sink = (
+        KafkaSink.builder()
+        .set_bootstrap_servers(kafka_bootstrap_server)
+        .set_record_serializer(
+            KafkaRecordSerializationSchema.builder()
+            .set_topic(config["kafka_publish_state_topic_name"])
+            .set_key_serialization_schema(
+                SimpleStringSchema(),
+            )
+            .set_value_serialization_schema(
+                SimpleStringSchema(),
             )
             .build(),
         )
@@ -152,19 +165,11 @@ def main(config: SynchronizeAppSearchConfig) -> None:
             client_secret_key=config.get("keycloak_client_secret_key"),
         )
 
-    config_store = ConfigStore.get_instance()
-    config_store.set_many(
-        **{
-            "atlas.server.url": config["atlas_server_url"],
-            "atlas.credentials.username": config["keycloak_username"],
-            "atlas.credentials.password": config["keycloak_password"],
-        },
-    )
-
     input_stream = env.add_source(kafka_consumer).name("Kafka Source")
 
     get_entity = GetEntity(
         input_stream,
+        config["atlas_server_url"],
         create_keycloak_client,
         (config["keycloak_username"], config["keycloak_password"]),
     )
@@ -172,7 +177,7 @@ def main(config: SynchronizeAppSearchConfig) -> None:
     publish_state = PublishState(
         get_entity.main,
         create_elasticsearch_client,
-        config["elasticsearch_state_index_name"],
+        config["elasticsearch_publish_state_index_name"],
     )
 
     determine_change = DetermineChange(publish_state.previous_entity_retrieval.main)
@@ -183,19 +188,33 @@ def main(config: SynchronizeAppSearchConfig) -> None:
         config["elasticsearch_app_search_index_name"],
     )
 
-    synchronize_app_search.main.map(
-        lambda document: Row(
-            id=document[0],
-            value=document[1] if document[1] is None else document[1].to_json(),
+    publish_state.index_preparation.main.map(
+        lambda document: json.dumps(
+            {
+                "id": document.doc_id,
+                "value": json.loads(document.body.to_json()),
+            },
         ),
-    ).sink_to(app_search_sink).name("Kafka Sink")
+        Types.STRING(),
+    ).sink_to(publish_state_sink).name("Publish State Sink")
+
+    synchronize_app_search.main.map(
+        lambda document: json.dumps(
+            {
+                "id": document[0],
+                "value": document[1] if document[1] is None else document[1].to_dict(),
+            },
+        ),
+        Types.STRING(),
+    ).sink_to(app_search_sink).name("App Search Sink")
 
     get_entity.errors.union(
         publish_state.errors,
         determine_change.errors,
         synchronize_app_search.errors,
     ).map(
-        lambda err: json.dumps({"errror": type(err).__name__, "message": str(err)}), Types.STRING(),
+        lambda err: json.dumps({"error": type(err).__name__, "message": str(err)}),
+        Types.STRING(),
     ).sink_to(
         error_sink,
     ).name("Error Sink")
@@ -210,11 +229,12 @@ if __name__ == "__main__":
     config: SynchronizeAppSearchConfig = {
         "atlas_server_url": os.environ["ATLAS_SERVER_URL"],
         "elasticsearch_app_search_index_name": os.environ["ELASTICSEARCH_APP_SEARCH_INDEX_NAME"],
-        "elasticsearch_state_index_name": os.environ["ELASTICSEARCH_STATE_INDEX_NAME"],
+        "elasticsearch_publish_state_index_name": os.environ["ELASTICSEARCH_STATE_INDEX_NAME"],
         "elasticsearch_endpoint": os.environ["ELASTICSEARCH_ENDPOINT"],
         "elasticsearch_username": os.environ["ELASTICSEARCH_USERNAME"],
         "elasticsearch_password": os.environ["ELASTICSEARCH_PASSWORD"],
         "kafka_app_search_topic_name": os.environ["KAFKA_APP_SEARCH_TOPIC_NAME"],
+        "kafka_publish_state_topic_name": os.environ["KAFKA_PUBLISH_STATE_TOPIC_NAME"],
         "kafka_bootstrap_server_hostname": os.environ["KAFKA_BOOTSTRAP_SERVER_HOSTNAME"],
         "kafka_bootstrap_server_port": os.environ["KAFKA_BOOTSTRAP_SERVER_PORT"],
         "kafka_consumer_group_id": os.environ["KAFKA_CONSUMER_GROUP_ID"],

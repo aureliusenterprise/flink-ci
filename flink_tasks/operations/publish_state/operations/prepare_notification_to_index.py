@@ -1,10 +1,12 @@
-from pyflink.datastream import DataStream
+from m4i_atlas_core import AtlasChangeMessage
+from pyflink.datastream import DataStream, OutputTag
 from pyflink.datastream.functions import MapFunction
 
-from flink_tasks import EntityVersion, ValidatedInput
+from flink_tasks import EntityVersion
 
+NO_ENTITY_TAG = OutputTag("no_entity")
 
-class PrapareNotificationToIndexFunction(MapFunction):
+class PrepareNotificationToIndexFunction(MapFunction):
     """
     A custom `MapFunction` to prepare notifications for indexing.
 
@@ -12,7 +14,7 @@ class PrapareNotificationToIndexFunction(MapFunction):
     object suitable for indexing.
     """
 
-    def map(self, value: ValidatedInput) -> EntityVersion:  # noqa: A003
+    def map(self, value: AtlasChangeMessage) -> EntityVersion | tuple[OutputTag, Exception]:
         """
         Transform a ValidatedInput message into an EntityVersion object.
 
@@ -27,12 +29,16 @@ class PrapareNotificationToIndexFunction(MapFunction):
             The transformed message, ready for indexing.
         """
         msg_creation_time = value.msg_creation_time
-        event_time = value.event_time
+        event_time = value.message.event_time
+        entity = value.message.entity
 
-        doc_id = f"{value.entity.guid}_{msg_creation_time}"
+        if entity is None:
+            return NO_ENTITY_TAG, ValueError("Entity is required for indexing")
+
+        doc_id = f"{entity.guid}_{msg_creation_time}"
 
         return EntityVersion(
-            value.entity,
+            entity,
             doc_id,
             event_time,
             msg_creation_time,
@@ -65,6 +71,8 @@ class PrepareNotificationToIndex:
         """
         self.input_stream = input_stream
 
-        self.main = self.input_stream.map(PrapareNotificationToIndexFunction()).name(
+        self.main = self.input_stream.map(PrepareNotificationToIndexFunction()).name(
             "index_preparation",
         )
+
+        self.errors = self.main.get_side_output(NO_ENTITY_TAG).name("no_entity_error")

@@ -2,7 +2,6 @@ from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
 from aiohttp.web import HTTPError
-from keycloak import KeycloakError, KeycloakOpenID
 from m4i_atlas_core import (
     AtlasChangeMessage,
     AtlasChangeMessageBody,
@@ -14,6 +13,8 @@ from m4i_atlas_core import (
 )
 from marshmallow import ValidationError
 from pyflink.datastream import StreamExecutionEnvironment
+
+from keycloak import KeycloakError, KeycloakOpenID
 
 from .get_entity import GetEntity, KeycloakFactory
 
@@ -63,6 +64,7 @@ def event() -> AtlasChangeMessage:
         msg_source_ip="localhost",
         msg_created_by="test",
         msg_creation_time=1,
+        spooled=False,
         message=AtlasChangeMessageBody(
             event_time=1,
             operation_type=EntityAuditAction.ENTITY_CREATE,
@@ -111,6 +113,7 @@ def test_get_entity_process_valid_input_event(
     with patch(__package__ + ".get_entity.get_entity_by_guid", return_value=entity):
         get_entity = GetEntity(
             data_stream=data_stream,
+            atlas_url="test", # atlas_url is not used in the test
             keycloak_factory=keycloak_factory,
             credentials=("username", "password"),
         )
@@ -127,6 +130,7 @@ def test_get_entity_process_valid_input_event(
                 msg_source_ip="localhost",
                 msg_created_by="test",
                 msg_creation_time=1,
+                spooled=False,
                 message=AtlasChangeMessageBody(
                     event_time=1,
                     operation_type=EntityAuditAction.ENTITY_CREATE,
@@ -158,6 +162,7 @@ def test_get_entity_handle_invalid_input_event(
 
     get_entity = GetEntity(
         data_stream=data_stream,
+        atlas_url="test", # atlas_url is not used in the test
         keycloak_factory=keycloak_factory,
         credentials=("username", "password"),
     )
@@ -194,6 +199,7 @@ def test_get_entity_handle_event_without_entity(
         msg_source_ip="localhost",
         msg_created_by="test",
         msg_creation_time=1,
+        spooled=False,
         message=AtlasChangeMessageBody(
             event_time=1,
             operation_type=EntityAuditAction.ENTITY_CREATE,
@@ -207,6 +213,7 @@ def test_get_entity_handle_event_without_entity(
 
     get_entity = GetEntity(
         data_stream=data_stream,
+        atlas_url="test", # atlas_url is not used in the test
         keycloak_factory=keycloak_factory,
         credentials=("username", "password"),
     )
@@ -240,6 +247,7 @@ def test_get_entity_handle_http_error_during_entity_lookup(
     with patch(__package__ + ".get_entity.get_entity_by_guid", side_effect=HTTPError()):
         get_entity = GetEntity(
             data_stream=data_stream,
+            atlas_url="test", # atlas_url is not used in the test
             keycloak_factory=keycloak_factory,
             credentials=("username", "password"),
         )
@@ -275,6 +283,7 @@ def test_get_entity_handle_keycloak_error_during_entity_lookup(
     ):
         get_entity = GetEntity(
             data_stream=data_stream,
+            atlas_url="test", # atlas_url is not used in the test
             keycloak_factory=keycloak_factory,
             credentials=("username", "password"),
         )
