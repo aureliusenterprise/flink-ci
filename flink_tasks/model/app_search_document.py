@@ -14,7 +14,7 @@ class AppSearchDocument(DataClassJsonMixin):
     typename: str
 
     # Elasticsearch document ID
-    id: str | None = None  # noqa: A003
+    id: str | None = None
 
     # Data quality related attributes
     dqscore_accuracy: float = field(default_factory=float)

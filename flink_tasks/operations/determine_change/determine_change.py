@@ -18,7 +18,7 @@ class DetermineChangeFunction(MapFunction):
     handling.
     """
 
-    def map(  # noqa: A003
+    def map(
         self,
         value: AtlasChangeMessageWithPreviousVersion,
     ) -> list[EntityMessage] | tuple[OutputTag, Exception]:
