@@ -51,6 +51,7 @@ def create_mock_change_message(
         },
         "msg_source_ip": "192.168.1.1",
         "previous_version": previous,
+        "spooled": False,
     }
 
     return AtlasChangeMessageWithPreviousVersion.from_dict(change_message)

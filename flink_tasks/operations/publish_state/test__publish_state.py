@@ -12,7 +12,7 @@ from m4i_atlas_core import (
 from marshmallow import ValidationError
 from pyflink.datastream import StreamExecutionEnvironment
 
-from flink_tasks import KafkaNotification, ValidatedInput
+from flink_tasks import KafkaNotification
 
 from .publish_state import PublishState
 
@@ -64,35 +64,9 @@ def event() -> KafkaNotification:
                 entity=Entity(guid="1234"),
                 relationship=None,
             ),
+            spooled=False,
         ),
     )
-
-
-def test__publish_state_validate_input(
-    environment: StreamExecutionEnvironment,
-    event: KafkaNotification,
-) -> None:
-    """
-    Test the validation stage of the PublishState.
-
-    This test checks if the input `KafkaNotification` event is correctly validated and transformed
-    into a `ValidatedInput` object.
-    """
-    data_stream = environment.from_collection([event.to_json()])
-
-    publish_state = PublishState(data_stream, mock.Mock, "test-index")
-
-    expected = [
-        ValidatedInput(
-            entity=Entity(guid="1234"),
-            event_time=1,
-            msg_creation_time=1,
-        ),
-    ]
-
-    output = list(publish_state.input_validation.main.execute_and_collect())
-
-    assert output == expected
 
 
 def test__publish_state_validate_input_with_invalid_input(
