@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import cast
@@ -7,6 +8,7 @@ from aiohttp.web import HTTPError
 from m4i_atlas_core import (
     AtlasChangeMessage,
     ConfigStore,
+    ExistingEntityTypeException,
     data_dictionary_entity_types,
     get_entity_by_guid,
     register_atlas_entity_types,
@@ -80,7 +82,8 @@ class GetEntityFunction(MapFunction):
         store = ConfigStore.get_instance()
         store.set("atlas.server.url", self.atlas_url)
 
-        register_atlas_entity_types(data_dictionary_entity_types)
+        with contextlib.suppress(ExistingEntityTypeException):
+            register_atlas_entity_types(data_dictionary_entity_types)
 
     def close(self) -> None:
         """Close the event loop."""
