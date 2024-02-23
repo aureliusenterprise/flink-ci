@@ -7,7 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "~3.10"
-m4i-atlas-core = { git = "https://github.com/aureliusenterprise/m4i_atlas_core.git" }
+m4i-atlas-core = { git = "https://github.com/aureliusenterprise/m4i_atlas_core.git", rev = "b35a9b6d54b5d1dfb9f90b6e9fc33297c2daa11f" }
 apache-flink = "^1.17"
 dataclasses-json = "^0.6"
 kafka-python = "^2.0"
@@ -32,6 +32,8 @@ venvPath = "."
 [tool.ruff]
 select = ["ALL"]
 ignore = [
+    # Flink function protocol shadows Python built in function names.
+    "A003",
     # Self and cls do not require annotations.
     "ANN101",
     "ANN102",
@@ -55,6 +57,7 @@ target-version = "py310"
 # More convenient to provide `__all__` in files instead of duplicating in package __init__.
 "__init__.py" = ["F401", "F403", "F405"]
 "test__*.py" = ["PLR2004", "S101"]
+"scripts/*" = ["INP001"]
 
 [tool.ruff.pydocstyle]
 convention = "numpy"

@@ -1,0 +1,2 @@
+#!/bin/bash
+echo $(poetry run python scripts/get_keycloak_token.py)

@@ -1,0 +1,14 @@
+#!/bin/bash
+
+echo "Retrieving authentication token..."
+TOKEN=$(get-keycloak-token)
+
+export TOKEN
+
+echo "Importing Aurelius Atlas types..."
+atlas-import-types > /dev/null
+
+echo "Importing development entities..."
+atlas-import-entities > /dev/null
+
+echo "Done."

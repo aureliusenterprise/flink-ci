@@ -6,7 +6,7 @@ services:
     image: confluentinc/cp-zookeeper:7.3.2
     container_name: zookeeper
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_CLIENT_PORT: 2182
       ZOOKEEPER_TICK_TIME: 2000
     network_mode: service:dev
     restart: unless-stopped
@@ -20,14 +20,46 @@ services:
       - code:/code
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: localhost:2181
+      KAFKA_ZOOKEEPER_CONNECT: localhost:2182
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
     network_mode: service:dev
     restart: unless-stopped
+
+  kafka-connect:
+    build:
+      context: .
+      dockerfile: ../docker/kafka-connect/Dockerfile
+      args:
+        CONNECT_ELASTICSEARCH_VERSION: "14.0.11"
+        CONNECT_VERSION: "7.3.2"
+    depends_on:
+      - kafka-broker
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: localhost:9092
+      CONNECT_REST_ADVERTISED_HOST_NAME: localhost
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: kafka-connect-group
+      CONNECT_CONFIG_STORAGE_TOPIC: kafka-connect-configs
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_CONFIG_STORAGE_CLEANUP_POLICY: compact
+      CONNECT_OFFSET_STORAGE_TOPIC: kafka-connect-offsets
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_CLEANUP_POLICY: compact
+      CONNECT_STATUS_STORAGE_TOPIC: kafka-connect-status
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_CLEANUP_POLICY: compact
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+
+      CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
+    network_mode: service:dev
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
