@@ -70,9 +70,6 @@ def test__synchronize_app_search_valid_input_event(environment: StreamExecutionE
         synchronize_app_search = SynchronizeAppSearch(data_stream, Mock, "test-index")
         output = list(synchronize_app_search.main.execute_and_collect())
 
-    synchronize_app_search = SynchronizeAppSearch(data_stream, Mock, "test-index")
-    output = list(synchronize_app_search.main.execute_and_collect())
-
     assert len(output) == 1
 
     item = output[0]

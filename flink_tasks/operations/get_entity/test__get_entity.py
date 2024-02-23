@@ -244,7 +244,7 @@ def test_get_entity_handle_http_error_during_entity_lookup(
     """
     data_stream = environment.from_collection([event.to_json()])
 
-    with patch(__package__ + ".get_entity.get_entity_by_guid", side_effect=HTTPError()):
+    with patch(__package__ + ".get_entity.get_entity_by_guid", new=Mock(side_effect=HTTPError())):
         get_entity = GetEntity(
             data_stream=data_stream,
             atlas_url="test", # atlas_url is not used in the test
@@ -294,4 +294,4 @@ def test_get_entity_handle_keycloak_error_during_entity_lookup(
 
         error = output[0]
 
-        assert isinstance(error, RuntimeError)
+        assert isinstance(error, KeycloakError)

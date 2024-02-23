@@ -129,7 +129,9 @@ class GetEntityFunction(MapFunction):
                     cache_read=False,
                 ),
             )
-        except (HTTPError, KeycloakError) as e:
+        except HTTPError as e:
+            return ENTITY_LOOKUP_ERROR_TAG, RuntimeError(f"HTTP error during entity lookup: {e}")
+        except KeycloakError as e:
             return ENTITY_LOOKUP_ERROR_TAG, e
 
         change_message.message.entity = entity_details
