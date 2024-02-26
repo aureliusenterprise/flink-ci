@@ -114,7 +114,6 @@ The following commands are available for Keycloak in the development environment
 | `keycloak-config-deploy`   | Deploys the Keycloak server configuration from this repository to the shared volume used by the Keycloak Server. |
 | `keycloak-settings-deploy` | Deploys the Keycloak realm settings from this repository to the shared volume used by the Keycloak Server.       |
 
-
 ## Build
 
 This project is distributed as a docker image. To build the image, run the following commands from the root of the project directory:
