@@ -1055,7 +1055,7 @@ files = [
 
 [[package]]
 name = "iniconfig"
-version = "2.0.1"
+version = "2.0.0"
 description = "brain-dead simple config-ini parsing"
 optional = false
 python-versions = ">=3.7"
