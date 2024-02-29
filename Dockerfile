@@ -6,6 +6,7 @@ RUN apt-get update -y && \
     apt-get install -y jq && \
     apt-get install -y ca-certificates && \
     apt-get install -y build-essential libssl-dev zlib1g-dev libbz2-dev libffi-dev && \
+    apt-get install -y liblzma-dev lzma && \
     apt-get install -y git && \
     apt-get install -y vim && \
     apt-get clean && \
