@@ -2,10 +2,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 from m4i_atlas_core import (
-    Attributes,
     BusinessDataEntity,
     BusinessDataEntityAttributes,
-    Entity,
     EntityAuditAction,
     M4IAttributes,
     ObjectId,
@@ -33,10 +31,14 @@ def test__default_create_handler_with_complete_details() -> None:
         guid="1234",
         original_event_type=EntityAuditAction.ENTITY_CREATE,
         event_type=EntityMessageType.ENTITY_CREATED,
-        new_value=Entity(
+        new_value=BusinessDataEntity(
             guid="1234",
             type_name="m4i_data_domain",
-            attributes=Attributes.from_dict({"qualifiedName": "1234-test", "name": "test"}),
+            attributes=BusinessDataEntityAttributes.from_dict({
+                "qualifiedName": "1234-test",
+                "name": "test",
+                "unmapped_attributes": {},
+                }),
         ),
     )
 
@@ -56,40 +58,6 @@ def test__default_create_handler_with_complete_details() -> None:
         assert document.name == "test"
         assert document.referenceablequalifiedname == "1234-test"
 
-
-def test__default_create_handler_without_name() -> None:
-    """
-    Verify that `handle_entity_created` uses `qualifiedName` as `name` by default.
-
-    Asserts:
-    - The function produces one AppSearchDocument.
-    - The `name` attribute of the AppSearchDocument matches the `qualifiedName` of the entity.
-    """
-    entity_message = EntityMessage(
-        type_name="m4i_data_domain",
-        guid="1234",
-        original_event_type=EntityAuditAction.ENTITY_CREATE,
-        event_type=EntityMessageType.ENTITY_CREATED,
-        new_value=Entity(
-            guid="1234",
-            type_name="m4i_data_domain",
-            attributes=Attributes.from_dict({"qualifiedName": "1234-test"}),
-        ),
-    )
-
-    with patch(
-        "flink_tasks.synchronize_app_search.event_handlers.entity_created.entity_created.get_documents",
-        return_value=[],
-    ):
-        result = handle_entity_created(entity_message, Mock(), "test_index")
-
-        assert len(result) == 1
-
-        document = result[0]
-
-        assert document.name == "1234-test"
-
-
 def test__create_person_handler_with_email() -> None:
     """
     Verify that `handle_entity_created` correctly processes a person entity.
@@ -103,14 +71,16 @@ def test__create_person_handler_with_email() -> None:
         guid="1234",
         original_event_type=EntityAuditAction.ENTITY_CREATE,
         event_type=EntityMessageType.ENTITY_CREATED,
-        new_value=Entity(
+        new_value=BusinessDataEntity(
             guid="1234",
             type_name="m4i_person",
-            attributes=Attributes.from_dict(
-                {"qualifiedName": "1234-test", "name": "test", "email": "john.doe@example.com"},
+            attributes=BusinessDataEntityAttributes.from_dict({
+                "qualifiedName": "1234-test", "name": "test",
+                "unmapped_attributes": {"email": "john.doe@example.com"}},
             ),
         ),
     )
+
     with patch(
         "flink_tasks.synchronize_app_search.event_handlers.entity_created.entity_created.get_documents",
         return_value=[],

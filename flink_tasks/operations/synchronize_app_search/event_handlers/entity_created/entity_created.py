@@ -81,7 +81,7 @@ def get_breadcrumbs_of_entity(
     dict[str, Any]
         A dict containing updated breadcrumb details - name, GUID, and type.
     """
-    attributes: dict[str, Any] = cast(dict, input_entity.attributes.unmapped_attributes)
+    attributes: dict[str, Any] = {}
     # set default values
     attributes.update({"breadcrumbname": [],"breadcrumbguid": [],"breadcrumbtype": []})
     # Get the first parent of the entity
@@ -138,11 +138,9 @@ def create_derived_relations(
             guids: list[str] = getattr(document, key + "guid")
             names: list[str] = getattr(document, key)
             # Update guid and name with a fallback value to qualifiedName
-            if hasattr(entity_details.attributes, "name"):
-                name = entity_details.attributes.name  # type: ignore
-            else:
-                attr: dict[str, str] = cast(dict, entity_details.attributes.unmapped_attributes)
-                name = attr["qualifiedName"]
+            qualified_name = getattr(entity_details.attributes, "qualified_name", "")
+            name = getattr(entity_details.attributes, "name", qualified_name)
+            # Append to the list
             guids.append(entity_details.guid)
             names.append(name)
         yield document
@@ -178,8 +176,8 @@ def update_children_breadcrumb(
     # Find all documents that reference immediate children of the main entity in their breadcrumb
     query = {"query": {"terms": {"breadcrumb_guid": list_of_children}}}
     # Get name of the main entity
-    attributes: dict[str, str] = cast(dict, entity_details.attributes.unmapped_attributes)
-    name = attributes.get("name", attributes["qualifiedName"])
+    qualified_name = getattr(entity_details.attributes, "qualified_name", "")
+    name = getattr(entity_details.attributes, "name", qualified_name)
     # Set the breadcrumbs of all children
     for document in get_documents(query, elastic, index_name):
         document.breadcrumbname = [*attr["breadcrumbname"], name, *document.breadcrumbname]
@@ -279,11 +277,11 @@ def default_create_handler(
         List of AppSearchDocument instances representing the created entity and related entities.
     """
     # Set attributes of the main entity
-    attributes: dict = get_breadcrumbs_of_entity(entity_details, elastic, index_name)
-    qualified_name = attributes["qualifiedName"]
-    name = attributes.get("name", qualified_name)
+    breadcrumbs: dict = get_breadcrumbs_of_entity(entity_details, elastic, index_name)
+    qualified_name = getattr(entity_details.attributes, "qualified_name", entity_details.guid)
+    name = getattr(entity_details.attributes, "name", qualified_name)
     # Update children and related entities of the main entity
-    docs, references = update_existing_documents(entity_details, elastic, index_name, attributes)
+    docs, references = update_existing_documents(entity_details, elastic, index_name, breadcrumbs)
     # Merge
     docs.insert(
         0,
@@ -293,9 +291,9 @@ def default_create_handler(
             typename=entity_details.type_name,
             name=name,
             referenceablequalifiedname=qualified_name,
-            breadcrumbname=attributes["breadcrumbname"],
-            breadcrumbguid=attributes["breadcrumbguid"],
-            breadcrumbtype=attributes["breadcrumbtype"],
+            breadcrumbname=breadcrumbs["breadcrumbname"],
+            breadcrumbguid=breadcrumbs["breadcrumbguid"],
+            breadcrumbtype=breadcrumbs["breadcrumbtype"],
             **references,
         ),
     )
