@@ -76,3 +76,4 @@ class AppSearchDocument(DataClassJsonMixin):
     deriveddatadomain: list[str] = field(default_factory=list)
     derivedentitynames: list[str] = field(default_factory=list)
     breadcrumbtype: list[str] = field(default_factory=list)
+    supertypenames: list[str] = field(default_factory=list)

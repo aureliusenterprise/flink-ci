@@ -294,6 +294,7 @@ def default_create_handler(
             breadcrumbname=breadcrumbs["breadcrumbname"],
             breadcrumbguid=breadcrumbs["breadcrumbguid"],
             breadcrumbtype=breadcrumbs["breadcrumbtype"],
+            supertypenames=[entity_details.type_name],
             **references,
         ),
     )
