@@ -123,7 +123,7 @@ class GetPreviousEntityFunction(MapFunction):
                     },
                     {
                         "range": {
-                            "msgCreationTime": {
+                            "updateTime": {
                                 "lt": msg_creation_time,
                             },
                         },
@@ -133,7 +133,7 @@ class GetPreviousEntityFunction(MapFunction):
         }
 
         sort = {
-            "msgCreationTime": {"numeric_type": "long", "order": "desc"},
+            "updateTime": {"numeric_type": "long", "order": "desc"},
         }
 
         try:
