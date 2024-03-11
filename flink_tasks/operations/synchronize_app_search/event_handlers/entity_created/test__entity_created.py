@@ -182,7 +182,7 @@ def test__handle_entity_created_add_relations() -> None:
         attributes=BusinessDataEntityAttributes.from_dict({
             "qualifiedName": "test-data-entity",
             "name": "test entity",
-            "unmapped_attributes":{"qualifiedName": "test-data-entity"},
+            "unmapped_attributes":{},
             }),
     )
 
@@ -190,8 +190,8 @@ def test__handle_entity_created_add_relations() -> None:
         guid="2222",
         type_name="m4i_data_domain",
         unique_attributes=M4IAttributes(
-            qualified_name="test object",
-            unmapped_attributes={"name": "My Data Domain"},
+            qualified_name="My Data Domain",
+            unmapped_attributes={},
         ),
     )]
 
@@ -206,7 +206,7 @@ def test__handle_entity_created_add_relations() -> None:
     related_document = AppSearchDocument(
         guid="2345",
         typename="m4i_data_domain",
-        name="Domain Name",
+        name="My Data Domain",
         referenceablequalifiedname="entity_name",
         breadcrumbguid=["5678"],
         breadcrumbname=["Parent Data Domain Name"],
@@ -221,14 +221,13 @@ def test__handle_entity_created_add_relations() -> None:
 
         document = result[0]
 
-        assert document.deriveddatadomainguid == ["2222"]
+        assert document.deriveddatadomainguid == ["2345"]
         assert document.deriveddatadomain == ["My Data Domain"]
 
         related_document = result[1]
 
         assert related_document.deriveddataentityguid == ["1111"]
         assert related_document.deriveddataentity == ["test entity"]
-
 
 def test__handle_entity_created_multiple_relations() -> None:
     """Verify that multiple relations are created."""
@@ -271,7 +270,7 @@ def test__handle_entity_created_multiple_relations() -> None:
     related_1 = AppSearchDocument(
         guid="2222",
         typename="m4i_data_domain",
-        name="Domain Name",
+        name="Test Data Domain",
         referenceablequalifiedname="data_domain_name",
     )
 

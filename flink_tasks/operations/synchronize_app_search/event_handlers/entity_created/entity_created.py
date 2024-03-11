@@ -3,7 +3,7 @@ from typing import Any, cast
 
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
-from m4i_atlas_core import Entity, M4IAttributes
+from m4i_atlas_core import Entity
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
 
@@ -103,7 +103,7 @@ def create_derived_relations(
     entity_details: Entity,
     elastic: Elasticsearch,
     index_name: str,
-    referenced: dict[str, list],
+    referenced: list[str | None],
 ) -> Generator[AppSearchDocument, None, None]:
     """
     Update existing `AppSearchDocument`s that represent entities related to the provided entity.
@@ -124,12 +124,8 @@ def create_derived_relations(
     Generator[AppSearchDocument, None, None]
         A generator yielding AppSearchDocument objects representing the derived relations.
     """
-    # Extract guids
-    guids = []
-    for value in referenced.values():
-        guids.extend(value)
     # Get all related entities of the main entity
-    query = {"query": {"terms": {"guid": guids}}}
+    query = {"query": {"terms": {"guid": referenced}}}
 
     for document in get_documents(query, elastic, index_name):
         for key in RELATIONSHIP_MAP[entity_details.type_name]:
@@ -216,28 +212,22 @@ def update_existing_documents(
     Generator[AppSearchDocument, None, None]
         A generator yielding AppSearchDocument objects representing the updated children.
     """
-    # Get referenced entities
-    referenced_guids, referenced_names = {}, {}
-
-    for ref in entity_details.get_referred_entities():
-        keys = RELATIONSHIP_MAP[ref.type_name]
-        for key in keys:
-            # Referenced entity's guid
-            referenced_guids.setdefault(key + "guid", []).append(ref.guid)
-            # Referenced entity's name
-            unique = cast(M4IAttributes, ref.unique_attributes)
-            unmapped: dict[str, str] = cast(dict, unique.unmapped_attributes)
-            # Set qualified_name as fallback value
-            referenced_names.setdefault(key, []).append(unmapped.get("name", unique.qualified_name))
-
+    relationships = [ref.guid for ref in entity_details.get_referred_entities()]
     # Query related entities
-    related = list(create_derived_relations(entity_details, elastic, index_name, referenced_guids))
+    related = list(create_derived_relations(entity_details, elastic, index_name, relationships))
+    # Create a dictionary of {guid: related documents}
+    related_dict = {doc.guid: doc for doc in related}
+    referenced_guids, referenced_names = {}, {}
+    for ref in related:
+        keys = RELATIONSHIP_MAP[ref.typename]
+        for key in keys:
+            # Referenced entity's name
+            referenced_guids.setdefault(key + "guid", []).append(ref.guid)
+            referenced_names.setdefault(key, []).append(ref.name)
     # Query all children entities
     appsearch_children = list(
         update_children_breadcrumb(entity_details, elastic, index_name, breadcrumbs),
     )
-    # Create a dictionary from related entities
-    related_dict = {doc.guid: doc for doc in related}
     # Merge related entities and children entities
     for child in appsearch_children:
         # Is child related to the main entity
