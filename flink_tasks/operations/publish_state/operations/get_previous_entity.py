@@ -118,13 +118,13 @@ class GetPreviousEntityFunction(MapFunction):
                 "filter": [
                     {
                         "match": {
-                            "body.guid.keyword": entity.guid,
+                            "guid.keyword": entity.guid,
                         },
                     },
                     {
                         "range": {
                             "updateTime": {
-                                "lt": msg_creation_time,
+                                "lte": msg_creation_time,
                             },
                         },
                     },
