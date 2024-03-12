@@ -1,3 +1,4 @@
+import json
 from collections.abc import Callable
 
 from elasticsearch import ApiError, Elasticsearch
@@ -148,11 +149,12 @@ class GetPreviousEntityFunction(MapFunction):
 
         if search_result["hits"]["total"]["value"] == 0:
             return NO_PREVIOUS_ENTITY_ERROR, ValueError(
-                f"No previous version found for entity {entity.guid}",
+                f"No previous version found for entity {entity.guid} at {msg_creation_time}. \
+                            ({json.dumps(search_result)})",
             )
 
         result.previous_version = Entity.from_dict(
-            search_result["hits"]["hits"][0]["_source"]["body"],
+            search_result["hits"]["hits"][0]["_source"],
         )
 
         return result
