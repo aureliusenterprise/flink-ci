@@ -31,6 +31,32 @@ class AppSearchDocumentNotFoundError(SynchronizeAppSearchError):
         super().__init__(f"AppSearchDocument not found for entity {guid}")
 
 
+def get_current_document(guid: str, elastic: Elasticsearch, index_name: str) -> AppSearchDocument:
+    """
+    Get the document representing the entity with the given id from the Elasticsearch index.
+
+    Parameters
+    ----------
+    guid : str
+        The unique id of the entity.
+    elastic : Elasticsearch
+        The Elasticsearch client.
+    index_name : str
+        The name of the index.
+
+    Returns
+    -------
+    AppSearchDocument
+        The AppSearchDocument instance.
+    """
+    result = elastic.get(index=index_name, id=guid)
+
+    if not result.body["found"]:
+        raise AppSearchDocumentNotFoundError(guid)
+
+    return AppSearchDocument.from_dict(result.body["_source"])
+
+
 def get_related_documents(
     ids: list[str],
     elastic: Elasticsearch,
@@ -139,10 +165,10 @@ def handle_deleted_relationships(
         if related_document.guid in updated_documents:
             related_document = updated_documents[related_document.guid]  # noqa: PLW2901
 
-        field = RELATIONSHIP_MAP[document.typename]
-        related_field = RELATIONSHIP_MAP[related_document.typename]
+        field = RELATIONSHIP_MAP[related_document.typename]
+        related_field = RELATIONSHIP_MAP[document.typename]
 
-        guids: list[str] = getattr(document, f"${field}guid")
+        guids: list[str] = getattr(document, f"{field}guid")
         names: list[str] = getattr(document, field)
 
         if related_document.guid in guids:
@@ -151,7 +177,7 @@ def handle_deleted_relationships(
             guids.pop(idx)
             names.pop(idx)
 
-        related_guids: list[str] = getattr(related_document, f"${related_field}guid")
+        related_guids: list[str] = getattr(related_document, f"{related_field}guid")
         related_names: list[str] = getattr(related_document, related_field)
 
         if document.guid in related_guids:
@@ -223,24 +249,26 @@ def handle_inserted_relationships(
 
     for related_document in get_related_documents(inserted_relationships, elastic, index_name):
         if related_document.guid in updated_documents:
-            related_document = updated_documents[related_document.guid] # noqa: PLW2901
+            related_document = updated_documents[related_document.guid]  # noqa: PLW2901
 
-        field = RELATIONSHIP_MAP[document.typename]
-        related_field = RELATIONSHIP_MAP[related_document.typename]
+        field = RELATIONSHIP_MAP[related_document.typename]
+        related_field = RELATIONSHIP_MAP[document.typename]
 
-        guids: list[str] = getattr(document, f"${field}guid")
+        guids: list[str] = getattr(document, f"{field}guid")
         names: list[str] = getattr(document, field)
 
         if related_document.guid not in guids:
             guids.append(related_document.guid)
             names.append(related_document.name)
 
-        related_guids: list[str] = getattr(related_document, f"${related_field}guid")
+        related_guids: list[str] = getattr(related_document, f"{related_field}guid")
         related_names: list[str] = getattr(related_document, related_field)
 
         if document.guid not in related_guids:
             related_guids.append(document.guid)
             related_names.append(document.name)
+
+        updated_documents[related_document.guid] = related_document
 
     if message.new_value is None:
         return updated_documents
@@ -253,20 +281,23 @@ def handle_inserted_relationships(
         index_name,
     ):
         if child_document.guid in updated_documents:
-            child_document = updated_documents[child_document.guid] # noqa: PLW2901
+            child_document = updated_documents[child_document.guid]  # noqa: PLW2901
 
         child_document.breadcrumbguid = [
             *document.breadcrumbguid,
+            document.guid,
             *child_document.breadcrumbguid,
         ]
 
         child_document.breadcrumbname = [
             *document.breadcrumbname,
+            document.name,
             *child_document.breadcrumbname,
         ]
 
         child_document.breadcrumbtype = [
             *document.breadcrumbtype,
+            document.typename,
             *child_document.breadcrumbtype,
         ]
 
@@ -300,12 +331,7 @@ def handle_relationship_audit(
     if not (message.inserted_relationships or message.deleted_relationships):
         return []
 
-    result = elastic.get(index=index_name, id=message.guid)
-
-    if not result.body["found"]:
-        raise AppSearchDocumentNotFoundError(message.guid)
-
-    document = AppSearchDocument.from_dict(result.body["_source"])
+    document = get_current_document(message.guid, elastic, index_name)
 
     updated_documents: dict[str, AppSearchDocument] = {document.guid: document}
 
