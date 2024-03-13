@@ -14,6 +14,7 @@ from .event_handlers import (
     handle_delete_breadcrumbs,
     handle_delete_derived_entities,
     handle_entity_created,
+    handle_relationship_audit,
     handle_update_attributes,
     handle_update_breadcrumbs,
     handle_update_derived_entities,
@@ -30,6 +31,7 @@ EVENT_HANDLERS: dict[EntityMessageType, list[EventHandler]] = {
         handle_update_derived_entities,
     ],
     EntityMessageType.ENTITY_DELETED: [handle_delete_breadcrumbs, handle_delete_derived_entities],
+    EntityMessageType.ENTITY_RELATIONSHIP_AUDIT: [handle_relationship_audit],
 }
 
 UNKNOWN_EVENT_TYPE_TAG = OutputTag("unknown_event_type")

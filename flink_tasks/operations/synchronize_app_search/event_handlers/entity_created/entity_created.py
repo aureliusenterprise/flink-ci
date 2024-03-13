@@ -170,7 +170,7 @@ def update_children_breadcrumb(
     # A list of children of the main entity
     list_of_children = [x.guid for x in entity_details.get_children()]
     # Find all documents that reference immediate children of the main entity in their breadcrumb
-    query = {"query": {"terms": {"breadcrumb_guid": list_of_children}}}
+    query = {"query": {"terms": {"breadcrumbguid": list_of_children}}}
     # Get name of the main entity
     qualified_name = getattr(entity_details.attributes, "qualified_name", "")
     name = getattr(entity_details.attributes, "name", qualified_name)
