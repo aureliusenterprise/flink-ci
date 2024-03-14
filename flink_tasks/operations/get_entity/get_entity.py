@@ -118,7 +118,7 @@ class GetEntityFunction(MapFunction):
         entity = change_message.message.entity
 
         if entity is None:
-            return NO_ENTITY_ERROR_TAG, ValueError("No entity found in message.")
+            return NO_ENTITY_ERROR_TAG, ValueError(f"No entity found in message. Value={value}")
 
         try:
             entity_details = self.loop.run_until_complete(

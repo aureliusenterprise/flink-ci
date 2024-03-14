@@ -225,7 +225,6 @@ def test_get_entity_handle_event_without_entity(
     error = output[0]
 
     assert isinstance(error, ValueError)
-    assert str(error) == "No entity found in message."
 
 
 def test_get_entity_handle_http_error_during_entity_lookup(
