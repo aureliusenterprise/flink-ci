@@ -249,6 +249,4 @@ if __name__ == "__main__":
         "keycloak_username": os.environ["KEYCLOAK_USERNAME"],
     }
 
-    logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(message)s")
-
     main(config)
