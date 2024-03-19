@@ -223,11 +223,13 @@ def test__handle_entity_created_add_relations() -> None:
 
         assert document.deriveddatadomainguid == ["2345"]
         assert document.deriveddatadomain == ["My Data Domain"]
+        assert document.parentguid == "2345"
 
         related_document = result[1]
 
         assert related_document.deriveddataentityguid == ["1111"]
         assert related_document.deriveddataentity == ["test entity"]
+        assert related_document.parentguid == "5678"
 
 def test__handle_entity_created_multiple_relations() -> None:
     """Verify that multiple relations are created."""
