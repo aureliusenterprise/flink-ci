@@ -173,6 +173,8 @@ def test__handle_entity_created_with_breadcrumbs() -> None:
         assert document.breadcrumbname == ["Parent Data Domain Name", "Domain Name"]
         assert document.breadcrumbguid == ["5678", "2345"]
         assert document.breadcrumbtype == ["m4i_data_domain", "m4i_data_domain"]
+        assert document.parentguid == "2345"
+
 
 def test__handle_entity_created_add_relations() -> None:
     """Verify that the created entity's relations are also added."""
