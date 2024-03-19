@@ -207,6 +207,7 @@ def handle_deleted_relationships(
         child_document.breadcrumbguid = child_document.breadcrumbguid[idx + 1 :]
         child_document.breadcrumbname = child_document.breadcrumbname[idx + 1 :]
         child_document.breadcrumbtype = child_document.breadcrumbtype[idx + 1 :]
+        child_document.parentguid = child_document.breadcrumbguid[-1] if child_document.breadcrumbguid else None
 
     return updated_documents
 
@@ -301,6 +302,8 @@ def handle_inserted_relationships(
             *child_document.breadcrumbtype,
         ]
 
+        child_document.parentguid = child_document.breadcrumbguid[-1] if child_document.breadcrumbguid else None
+
         updated_documents[child_document.guid] = child_document
 
     return updated_documents
@@ -350,5 +353,7 @@ def handle_relationship_audit(
         index_name,
         updated_documents,
     )
+
+    updated_documents[document.guid].parentguid = document.breadcrumbguid[-1] if document.breadcrumbguid else None
 
     return list(updated_documents.values())
