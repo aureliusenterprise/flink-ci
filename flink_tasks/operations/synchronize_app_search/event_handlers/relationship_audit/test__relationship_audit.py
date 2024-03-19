@@ -112,6 +112,7 @@ def test__handle_relationship_audit_inserted_relationship() -> None:
         assert updated_entity.breadcrumbguid == ["2345"]
         assert updated_entity.breadcrumbname == ["Domain Name"]
         assert updated_entity.breadcrumbtype == ["m4i_data_domain"]
+        assert updated_entity.parentguid == "2345"
 
 
 def test__handle_relationship_audit_deleted_relationship() -> None:
