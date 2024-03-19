@@ -236,6 +236,8 @@ def update_existing_documents(
             related_doc.breadcrumbname = child.breadcrumbname
             related_doc.breadcrumbguid = child.breadcrumbguid
             related_doc.breadcrumbtype = child.breadcrumbtype
+            # Add immediate parent
+            related_doc.parentguid = child.breadcrumbguid[-1] if child.breadcrumbguid else None
 
     # Merge related entities and all children entities
     related = list(related_dict.values()) + \
@@ -272,6 +274,8 @@ def default_create_handler(
     name = getattr(entity_details.attributes, "name", qualified_name)
     # Update children and related entities of the main entity
     docs, references = update_existing_documents(entity_details, elastic, index_name, breadcrumbs)
+    # Immediate parent if exists
+    parentguid = breadcrumbs["breadcrumbguid"][-1] if breadcrumbs["breadcrumbguid"] else None
     # Merge
     docs.insert(
         0,
@@ -285,6 +289,7 @@ def default_create_handler(
             breadcrumbguid=breadcrumbs["breadcrumbguid"],
             breadcrumbtype=breadcrumbs["breadcrumbtype"],
             supertypenames=[entity_details.type_name],
+            parentguid=parentguid,
             **references,
         ),
     )
