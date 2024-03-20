@@ -4,6 +4,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
+from flink_tasks.utils.retry_mechanism import retry_with_backoff
 
 RELATIONSHIP_MAP = {
     "m4i_data_domain": "deriveddatadomain",
@@ -124,6 +125,18 @@ def get_child_documents(
     for search_result in scan(elastic, index=index_name, query=query):
         yield AppSearchDocument.from_dict(search_result["_source"])
 
+
+def get_related_documents_with_retry(
+        inserted_relationships: list[str],
+        elastic: Elasticsearch,
+        index_name: str,
+        ) -> Generator[AppSearchDocument, None, None]:
+    """Get the related documents from the Elasticsearch index, and apply retry."""
+
+    def length_predicate(result) -> bool:  # noqa: ANN001
+        return len(result) == len(inserted_relationships)
+
+    return retry_with_backoff(get_related_documents,inserted_relationships, elastic, index_name, predicate=length_predicate)
 
 def handle_deleted_relationships(
     message: EntityMessage,
@@ -248,7 +261,7 @@ def handle_inserted_relationships(
     if not inserted_relationships:
         return updated_documents
 
-    for related_document in get_related_documents(inserted_relationships, elastic, index_name):
+    for related_document in get_related_documents_with_retry(inserted_relationships, elastic, index_name):
         if related_document.guid in updated_documents:
             related_document = updated_documents[related_document.guid]  # noqa: PLW2901
 
