@@ -133,10 +133,12 @@ def get_related_documents_with_retry(
         ) -> Generator[AppSearchDocument, None, None]:
     """Get the related documents from the Elasticsearch index, and apply retry."""
 
-    def length_predicate(result) -> bool:  # noqa: ANN001
-        return len(result) == len(inserted_relationships)
+    def length_predicate(result: Generator[AppSearchDocument, None, None]) -> tuple[bool, Generator[AppSearchDocument, None, None]]:
+        docs_list = list(result)
+        return len(docs_list) == len(inserted_relationships), (x for x in docs_list)
 
-    return retry_with_backoff(get_related_documents,inserted_relationships, elastic, index_name, predicate=length_predicate)
+    return retry_with_backoff(get_related_documents, inserted_relationships, elastic, index_name, predicate=length_predicate)
+
 
 def handle_deleted_relationships(
     message: EntityMessage,

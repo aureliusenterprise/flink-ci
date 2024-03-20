@@ -29,15 +29,20 @@ def retry_with_backoff(  # noqa: PLR0913
         elastic: Elasticsearch,
         index_name: str,
         max_retries: int=5,
-        predicate: Callable[[T], bool] | None = None,
+        predicate: Callable[[T], tuple[bool, T]] | None = None,
         ) -> T:
     """Retry a function with exponential backoff."""
     retry_delay = 1
     for attempt in range(max_retries):
         try:
             result = function(ids, elastic, index_name)
-            if predicate is None or predicate(result):
+
+            if predicate is None:
                 return result
+            else:
+                is_correct, gen = predicate(result)
+                if is_correct:
+                    return gen
         except MaxRetriesReachedError as e:
             if attempt == max_retries - 1:
                 raise MaxRetriesReachedError(attempt) from e
