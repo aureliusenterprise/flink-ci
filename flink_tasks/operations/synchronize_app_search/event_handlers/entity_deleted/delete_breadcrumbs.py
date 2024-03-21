@@ -5,6 +5,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
+from flink_tasks.utils import ExponentialBackoff, retry
 
 
 class EntityDataNotProvidedError(SynchronizeAppSearchError):
@@ -22,6 +23,7 @@ class EntityDataNotProvidedError(SynchronizeAppSearchError):
         super().__init__(f"Entity data not provided for entity {guid}")
 
 
+@retry(retry_strategy=ExponentialBackoff())
 def get_documents(
     query: dict,
     elastic: Elasticsearch,

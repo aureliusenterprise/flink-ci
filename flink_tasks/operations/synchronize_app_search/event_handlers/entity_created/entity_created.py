@@ -6,6 +6,7 @@ from elasticsearch.helpers import scan
 from m4i_atlas_core import Entity
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
+from flink_tasks.utils import ExponentialBackoff, retry
 
 RELATIONSHIP_MAP = {
     "m4i_data_domain": ["deriveddatadomain"],
@@ -33,6 +34,7 @@ class EntityDataNotProvidedError(SynchronizeAppSearchError):
         super().__init__(f"Entity data not provided for entity {guid}")
 
 
+@retry(retry_strategy=ExponentialBackoff())
 def get_documents(
     query: dict,
     elastic: Elasticsearch,

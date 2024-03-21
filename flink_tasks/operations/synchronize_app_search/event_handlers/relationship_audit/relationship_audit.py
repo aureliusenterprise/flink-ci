@@ -31,7 +31,7 @@ class AppSearchDocumentNotFoundError(SynchronizeAppSearchError):
         """
         super().__init__(f"AppSearchDocument not found for entity {guid}")
 
-
+@retry(retry_strategy=ExponentialBackoff())
 def get_current_document(guid: str, elastic: Elasticsearch, index_name: str) -> AppSearchDocument:
     """
     Get the document representing the entity with the given id from the Elasticsearch index.
@@ -100,7 +100,7 @@ def get_related_documents(
 
     return results
 
-
+@retry(retry_strategy=ExponentialBackoff())
 def get_child_documents(
     ids: list[str],
     elastic: Elasticsearch,
