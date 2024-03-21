@@ -30,9 +30,9 @@ class RetryStrategy(Protocol):
 class FixedDelay(RetryStrategy):
     """Simple retry strategy with a fixed delay."""
 
-    delay: float
+    delay: float = 1
 
-    def sleep(self, _: int) -> None:
+    def sleep(self, attempts: int) -> None:  # noqa: ARG002
         """Sleep for a fixed duration."""
         time.sleep(self.delay)
 
@@ -43,6 +43,7 @@ class ExponentialBackoff(RetryStrategy):
 
     initial_delay: float = 1
     multiplier: float = 2
+    ceil: float = 60
     jitter: tuple[float, float] = (0, 1)
 
     def __post_init__(self) -> None:
@@ -52,6 +53,12 @@ class ExponentialBackoff(RetryStrategy):
         if self.multiplier <= 1:
             message = "Multiplier must be greater than 1"
             raise ValueError(message)
+        if self.ceil <= 0:
+            message = "Ceil must be greater than 0"
+            raise ValueError(message)
+        if not (0 <= self.jitter[0] < self.jitter[1]):
+            message = "Jitter must be a tuple with 0 <= min < max"
+            raise ValueError(message)
 
     def sleep(self, attempts: int) -> None:
         """Sleep for a duration based on the exponential backoff strategy."""
@@ -60,11 +67,12 @@ class ExponentialBackoff(RetryStrategy):
             range(attempts),
             self.initial_delay,
         )
-        time.sleep(current_delay)
+        time.sleep(min(current_delay, self.ceil))
 
 
 def retry(  # noqa: ANN201
     retry_strategy: RetryStrategy,
+    catch: tuple[type[Exception], ...] = (Exception,),
     max_retries: int = 5,
 ):
     """Retry decorator with a configurable retry strategy."""
@@ -76,7 +84,7 @@ def retry(  # noqa: ANN201
             while attempts < max_retries:
                 try:
                     return func(*args, **kwargs)
-                except Exception as e:  # noqa: PERF203, BLE001
+                except catch as e:  # noqa: PERF203
                     attempts += 1
                     logger.warning("Attempt %d failed", attempts, exc_info=True)
                     if attempts == max_retries:
