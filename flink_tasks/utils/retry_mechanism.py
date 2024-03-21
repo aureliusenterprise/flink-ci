@@ -32,6 +32,11 @@ class FixedDelay(RetryStrategy):
 
     delay: float = 1
 
+    def __post_init__(self) -> None:
+        if self.delay <= 0:
+            message = "Delay must be greater than 0"
+            raise ValueError(message)
+
     def sleep(self, attempts: int) -> None:  # noqa: ARG002
         """Sleep for a fixed duration."""
         time.sleep(self.delay)
