@@ -4,7 +4,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
-from flink_tasks.utils.retry_mechanism import retry_with_backoff
+from flink_tasks.utils.retry_mechanism import ExponentialBackoff, retry
 
 RELATIONSHIP_MAP = {
     "m4i_data_domain": "deriveddatadomain",
@@ -58,11 +58,12 @@ def get_current_document(guid: str, elastic: Elasticsearch, index_name: str) -> 
     return AppSearchDocument.from_dict(result.body["_source"])
 
 
+@retry(retry_strategy=ExponentialBackoff())
 def get_related_documents(
     ids: list[str],
     elastic: Elasticsearch,
     index_name: str,
-) -> Generator[AppSearchDocument, None, None]:
+) -> list[AppSearchDocument]:
     """
     Get the related documents from the Elasticsearch index.
 
@@ -77,8 +78,8 @@ def get_related_documents(
 
     Returns
     -------
-    Generator[AppSearchDocument, None, None]
-        Yields the related AppSearchDocument instances as they are retrieved from Elasticsearch.
+    list[AppSearchDocument]
+        A list of the related AppSearchDocument instances as they are retrieved from Elasticsearch.
     """
     query = {
         "query": {
@@ -88,8 +89,16 @@ def get_related_documents(
         },
     }
 
-    for search_result in scan(elastic, index=index_name, query=query):
-        yield AppSearchDocument.from_dict(search_result["_source"])
+    results = [
+        AppSearchDocument.from_dict(search_result["_source"])
+        for search_result in scan(elastic, index=index_name, query=query)
+    ]
+
+    if len(results) != len(ids):
+        message = "Some related documents were not found in the index"
+        raise SynchronizeAppSearchError(message)
+
+    return results
 
 
 def get_child_documents(
@@ -124,20 +133,6 @@ def get_child_documents(
 
     for search_result in scan(elastic, index=index_name, query=query):
         yield AppSearchDocument.from_dict(search_result["_source"])
-
-
-def get_related_documents_with_retry(
-        inserted_relationships: list[str],
-        elastic: Elasticsearch,
-        index_name: str,
-        ) -> Generator[AppSearchDocument, None, None]:
-    """Get the related documents from the Elasticsearch index, and apply retry."""
-
-    def length_predicate(result: Generator[AppSearchDocument, None, None]) -> tuple[bool, Generator[AppSearchDocument, None, None]]:
-        docs_list = list(result)
-        return len(docs_list) == len(inserted_relationships), (x for x in docs_list)
-
-    return retry_with_backoff(get_related_documents, inserted_relationships, elastic, index_name, predicate=length_predicate)
 
 
 def handle_deleted_relationships(
@@ -176,7 +171,9 @@ def handle_deleted_relationships(
     if not deleted_relationships:
         return updated_documents
 
-    for related_document in get_related_documents(deleted_relationships, elastic, index_name):
+    related_documents = get_related_documents(deleted_relationships, elastic, index_name)
+
+    for related_document in related_documents:
         if related_document.guid in updated_documents:
             related_document = updated_documents[related_document.guid]  # noqa: PLW2901
 
@@ -222,7 +219,9 @@ def handle_deleted_relationships(
         child_document.breadcrumbguid = child_document.breadcrumbguid[idx + 1 :]
         child_document.breadcrumbname = child_document.breadcrumbname[idx + 1 :]
         child_document.breadcrumbtype = child_document.breadcrumbtype[idx + 1 :]
-        child_document.parentguid = child_document.breadcrumbguid[-1] if child_document.breadcrumbguid else None
+        child_document.parentguid = (
+            child_document.breadcrumbguid[-1] if child_document.breadcrumbguid else None
+        )
 
     return updated_documents
 
@@ -263,7 +262,9 @@ def handle_inserted_relationships(
     if not inserted_relationships:
         return updated_documents
 
-    for related_document in get_related_documents_with_retry(inserted_relationships, elastic, index_name):
+    related_documents = get_related_documents(inserted_relationships, elastic, index_name)
+
+    for related_document in related_documents:
         if related_document.guid in updated_documents:
             related_document = updated_documents[related_document.guid]  # noqa: PLW2901
 
@@ -317,7 +318,9 @@ def handle_inserted_relationships(
             *child_document.breadcrumbtype,
         ]
 
-        child_document.parentguid = child_document.breadcrumbguid[-1] if child_document.breadcrumbguid else None
+        child_document.parentguid = (
+            child_document.breadcrumbguid[-1] if child_document.breadcrumbguid else None
+        )
 
         updated_documents[child_document.guid] = child_document
 
@@ -369,6 +372,8 @@ def handle_relationship_audit(
         updated_documents,
     )
 
-    updated_documents[document.guid].parentguid = document.breadcrumbguid[-1] if document.breadcrumbguid else None
+    updated_documents[document.guid].parentguid = (
+        document.breadcrumbguid[-1] if document.breadcrumbguid else None
+    )
 
     return list(updated_documents.values())
