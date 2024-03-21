@@ -4,7 +4,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
-from flink_tasks.utils.retry_mechanism import ExponentialBackoff, retry
+from flink_tasks.utils.retry_mechanism import ExponentialBackoff, RetryError, retry
 
 RELATIONSHIP_MAP = {
     "m4i_data_domain": "deriveddatadomain",
@@ -135,7 +135,7 @@ def get_child_documents(
         yield AppSearchDocument.from_dict(search_result["_source"])
 
 
-def handle_deleted_relationships(
+def handle_deleted_relationships( # noqa: C901
     message: EntityMessage,
     document: AppSearchDocument,
     elastic: Elasticsearch,
@@ -168,7 +168,10 @@ def handle_deleted_relationships(
     if not deleted_relationships:
         return updated_documents
 
-    related_documents = get_related_documents(deleted_relationships, elastic, index_name)
+    try:
+        related_documents = get_related_documents(deleted_relationships, elastic, index_name)
+    except RetryError as e:
+        raise SynchronizeAppSearchError(message) from e
 
     for related_document in related_documents:
         if related_document.guid in updated_documents:
@@ -201,7 +204,7 @@ def handle_deleted_relationships(
         return updated_documents
 
     breadcrumb_refs = {child.guid for child in message.old_value.get_children() if child.guid is not None}
-    breadcrumb_refs.add(document.guid) # Add self to the breadcrumb refs in case of child -> parent relationship
+    breadcrumb_refs.add(document.guid)  # Add self to the breadcrumb refs in case of child -> parent relationship
 
     for child_document in get_child_documents(
         list(breadcrumb_refs.intersection(deleted_relationships)),
@@ -222,7 +225,7 @@ def handle_deleted_relationships(
     return updated_documents
 
 
-def handle_inserted_relationships(
+def handle_inserted_relationships( # noqa: C901
     message: EntityMessage,
     document: AppSearchDocument,
     elastic: Elasticsearch,
@@ -255,7 +258,10 @@ def handle_inserted_relationships(
     if not inserted_relationships:
         return updated_documents
 
-    related_documents = get_related_documents(inserted_relationships, elastic, index_name)
+    try:
+        related_documents = get_related_documents(inserted_relationships, elastic, index_name)
+    except RetryError as e:
+        raise SynchronizeAppSearchError(message) from e
 
     for related_document in related_documents:
         if related_document.guid in updated_documents:
@@ -284,7 +290,7 @@ def handle_inserted_relationships(
         return updated_documents
 
     breadcrumb_refs = {child.guid for child in message.new_value.get_children() if child.guid is not None}
-    breadcrumb_refs.add(document.guid) # Add self to the breadcrumb refs in case of child -> parent relationship
+    breadcrumb_refs.add(document.guid)  # Add self to the breadcrumb refs in case of child -> parent relationship
 
     for child_document in get_child_documents(
         list(breadcrumb_refs.intersection(inserted_relationships)),
