@@ -83,18 +83,20 @@ def get_breadcrumbs_of_entity(
     """
     attributes: dict[str, Any] = {}
     # set default values
-    attributes.update({"breadcrumbname": [],"breadcrumbguid": [],"breadcrumbtype": []})
+    attributes.update({"breadcrumbname": [], "breadcrumbguid": [], "breadcrumbtype": []})
     # Get the first parent of the entity
     first_parent_guid = [x.guid for x in input_entity.get_parents()][:1]
     # Look up breadcrumbs of parents
     query = {"query": {"terms": {"guid": first_parent_guid}}}
 
     for document in get_documents(query, elastic, index_name):
-        attributes.update({
-            "breadcrumbname": [*document.breadcrumbname, document.name],
-            "breadcrumbguid": [*document.breadcrumbguid, document.guid],
-            "breadcrumbtype": [*document.breadcrumbtype, document.typename],
-        })
+        attributes.update(
+            {
+                "breadcrumbname": [*document.breadcrumbname, document.name],
+                "breadcrumbguid": [*document.breadcrumbguid, document.guid],
+                "breadcrumbtype": [*document.breadcrumbtype, document.typename],
+            },
+        )
 
     return attributes
 
@@ -178,10 +180,14 @@ def update_children_breadcrumb(
     for document in get_documents(query, elastic, index_name):
         document.breadcrumbname = [*attr["breadcrumbname"], name, *document.breadcrumbname]
         document.breadcrumbguid = [
-            *attr["breadcrumbguid"], entity_details.guid, *document.breadcrumbguid,
+            *attr["breadcrumbguid"],
+            entity_details.guid,
+            *document.breadcrumbguid,
         ]
         document.breadcrumbtype = [
-            *attr["breadcrumbtype"], entity_details.type_name, *document.breadcrumbtype,
+            *attr["breadcrumbtype"],
+            entity_details.type_name,
+            *document.breadcrumbtype,
         ]
         yield document
 
@@ -240,8 +246,7 @@ def update_existing_documents(
             related_doc.parentguid = child.breadcrumbguid[-1] if child.breadcrumbguid else None
 
     # Merge related entities and all children entities
-    related = list(related_dict.values()) + \
-        [child for child in appsearch_children if child.guid not in related_dict]
+    related = list(related_dict.values()) + [child for child in appsearch_children if child.guid not in related_dict]
 
     return related, referenced_guids | referenced_names
 

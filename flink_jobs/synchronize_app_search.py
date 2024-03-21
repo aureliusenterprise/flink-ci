@@ -1,7 +1,5 @@
 import json
-import logging
 import os
-import sys
 from pathlib import Path
 from typing import TypedDict
 
@@ -82,9 +80,7 @@ def main(config: SynchronizeAppSearchConfig) -> None:
     jars = [path.absolute().as_uri() for path in Path("./jars").glob("*.jar")]
     env.add_jars(*jars)
 
-    kafka_bootstrap_server = (
-        f"{config['kafka_bootstrap_server_hostname']}:{config['kafka_bootstrap_server_port']}"
-    )
+    kafka_bootstrap_server = f"{config['kafka_bootstrap_server_hostname']}:{config['kafka_bootstrap_server_port']}"
 
     kafka_consumer = (
         FlinkKafkaConsumer(

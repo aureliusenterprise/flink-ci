@@ -17,8 +17,7 @@ if __name__ == "__main__":
             "keycloak.realm.name": os.environ.get("KEYCLOAK_REALM_NAME"),
             "keycloak.client.secret.key": os.environ.get("KEYCLOAK_CLIENT_SECRET_KEY"),
             "keycloak.server.url": "http://localhost:8180/auth/",
-
         },
     )
 
-    print(get_keycloak_token()) #noqa: T201
+    print(get_keycloak_token())  # noqa: T201

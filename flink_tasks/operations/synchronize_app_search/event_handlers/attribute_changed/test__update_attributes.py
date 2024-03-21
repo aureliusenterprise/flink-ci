@@ -119,6 +119,7 @@ def test__update_no_whitelisted_attributes(elasticsearch: Mock) -> None:
 
     assert len(updated_docs) == 0
 
+
 def test__entity_message_without_new_value(elasticsearch: Mock) -> None:
     """
     Test handle_update_attributes with an entity message lacking new value.

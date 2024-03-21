@@ -181,8 +181,4 @@ def handle_update_derived_entities(
 
     handlers = DERIVED_ENTITY_UPDATE_HANDLERS.get(entity_type, [])
 
-    return [
-        entity
-        for handler in handlers
-        for entity in handler(entity_details.guid, entity_name, elastic, index_name)
-    ]
+    return [entity for handler in handlers for entity in handler(entity_details.guid, entity_name, elastic, index_name)]

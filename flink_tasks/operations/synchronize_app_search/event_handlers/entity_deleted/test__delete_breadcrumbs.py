@@ -113,6 +113,7 @@ def test__handle_update_breadcrumb_removes_parents() -> None:
         assert updated_document.breadcrumbname == []
         assert updated_document.breadcrumbtype == []
 
+
 def test__handle_update_derived_entities_no_old_value() -> None:
     """
     Test handling of breadcrumb updates when the old_value attribute is missing.

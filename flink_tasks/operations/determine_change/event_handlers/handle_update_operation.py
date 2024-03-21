@@ -96,9 +96,7 @@ def get_relationships_diff(a: Entity, b: Entity) -> dict[str, list[ObjectId]]:
 
     for attribute, relationships in b.relationship_attributes.items():
         difference[attribute] = [
-            relationship
-            for relationship in relationships
-            if relationship.guid not in a_relationships
+            relationship for relationship in relationships if relationship.guid not in a_relationships
         ]
 
     return difference
@@ -133,13 +131,9 @@ def handle_relationship_changes(
     inserted_relationships = get_relationships_diff(previous, current)
     deleted_relationships = get_relationships_diff(current, previous)
 
-    has_inserted_relationships = any(
-        any(relationships) for relationships in inserted_relationships.values()
-    )
+    has_inserted_relationships = any(any(relationships) for relationships in inserted_relationships.values())
 
-    has_deleted_relationships = any(
-        any(relationships) for relationships in deleted_relationships.values()
-    )
+    has_deleted_relationships = any(any(relationships) for relationships in deleted_relationships.values())
 
     if not (has_inserted_relationships or has_deleted_relationships):
         return None

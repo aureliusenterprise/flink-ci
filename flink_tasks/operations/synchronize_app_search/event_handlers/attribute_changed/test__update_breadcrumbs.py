@@ -133,7 +133,6 @@ def test__handle_update_derived_entities_no_name_update() -> None:
         handle_update_breadcrumbs(message, Mock(), "test_index")
 
 
-
 def test__handle_update_derived_entities_no_new_value() -> None:
     """
     Test handling of breadcrumb updates when the new_value attribute is missing.

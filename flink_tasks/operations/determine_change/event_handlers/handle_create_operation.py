@@ -1,4 +1,3 @@
-
 from flink_tasks import (
     AtlasChangeMessageWithPreviousVersion,
     EntityMessage,
@@ -44,7 +43,8 @@ def handle_create_operation(
     inserted_attributes = list(attributes_dict.keys())
 
     entity_message = EntityMessage.from_change_message(
-        change_message=change_message, event_type=EntityMessageType.ENTITY_CREATED,
+        change_message=change_message,
+        event_type=EntityMessageType.ENTITY_CREATED,
     )
 
     entity_message.inserted_attributes = inserted_attributes

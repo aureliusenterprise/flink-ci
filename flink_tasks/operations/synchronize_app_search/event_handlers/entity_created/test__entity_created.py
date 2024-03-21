@@ -34,11 +34,13 @@ def test__default_create_handler_with_complete_details() -> None:
         new_value=BusinessDataEntity(
             guid="1234",
             type_name="m4i_data_domain",
-            attributes=BusinessDataEntityAttributes.from_dict({
-                "qualifiedName": "1234-test",
-                "name": "test",
-                "unmapped_attributes": {},
-                }),
+            attributes=BusinessDataEntityAttributes.from_dict(
+                {
+                    "qualifiedName": "1234-test",
+                    "name": "test",
+                    "unmapped_attributes": {},
+                },
+            ),
         ),
     )
 
@@ -58,6 +60,7 @@ def test__default_create_handler_with_complete_details() -> None:
         assert document.name == "test"
         assert document.referenceablequalifiedname == "1234-test"
 
+
 def test__create_person_handler_with_email() -> None:
     """
     Verify that `handle_entity_created` correctly processes a person entity.
@@ -74,9 +77,12 @@ def test__create_person_handler_with_email() -> None:
         new_value=BusinessDataEntity(
             guid="1234",
             type_name="m4i_person",
-            attributes=BusinessDataEntityAttributes.from_dict({
-                "qualifiedName": "1234-test", "name": "test",
-                "unmapped_attributes": {"email": "john.doe@example.com"}},
+            attributes=BusinessDataEntityAttributes.from_dict(
+                {
+                    "qualifiedName": "1234-test",
+                    "name": "test",
+                    "unmapped_attributes": {"email": "john.doe@example.com"},
+                },
             ),
         ),
     )
@@ -127,11 +133,13 @@ def test__handle_entity_created_with_breadcrumbs() -> None:
     business_data_entity = BusinessDataEntity(
         guid="1111",
         type_name="m4i_data_entity",
-        attributes=BusinessDataEntityAttributes.from_dict({
-            "qualifiedName": "test-data-entity",
-            "name": "test entity",
-            "unmapped_attributes": {"qualifiedName": "test-data-entity"},
-            }),
+        attributes=BusinessDataEntityAttributes.from_dict(
+            {
+                "qualifiedName": "test-data-entity",
+                "name": "test entity",
+                "unmapped_attributes": {"qualifiedName": "test-data-entity"},
+            },
+        ),
     )
 
     parent_ref = ObjectId(
@@ -181,21 +189,25 @@ def test__handle_entity_created_add_relations() -> None:
     business_data_entity = BusinessDataEntity(
         guid="1111",
         type_name="m4i_data_entity",
-        attributes=BusinessDataEntityAttributes.from_dict({
-            "qualifiedName": "test-data-entity",
-            "name": "test entity",
-            "unmapped_attributes":{},
-            }),
+        attributes=BusinessDataEntityAttributes.from_dict(
+            {
+                "qualifiedName": "test-data-entity",
+                "name": "test entity",
+                "unmapped_attributes": {},
+            },
+        ),
     )
 
-    business_data_entity.attributes.data_domain = [ObjectId(
-        guid="2222",
-        type_name="m4i_data_domain",
-        unique_attributes=M4IAttributes(
-            qualified_name="My Data Domain",
-            unmapped_attributes={},
+    business_data_entity.attributes.data_domain = [
+        ObjectId(
+            guid="2222",
+            type_name="m4i_data_domain",
+            unique_attributes=M4IAttributes(
+                qualified_name="My Data Domain",
+                unmapped_attributes={},
+            ),
         ),
-    )]
+    ]
 
     entity_message = EntityMessage(
         type_name="m4i_data_entity",
@@ -233,35 +245,42 @@ def test__handle_entity_created_add_relations() -> None:
         assert related_document.deriveddataentity == ["test entity"]
         assert related_document.parentguid == "5678"
 
+
 def test__handle_entity_created_multiple_relations() -> None:
     """Verify that multiple relations are created."""
     data_entity = BusinessDataEntity(
         guid="1111",
         type_name="m4i_data_entity",
-        attributes=BusinessDataEntityAttributes.from_dict({
-            "qualifiedName": "1111-data-entity",
-            "name": "Test Entity",
-            "unmapped_attributes":{"qualifiedName": "1111-data-entity"},
-            }),
+        attributes=BusinessDataEntityAttributes.from_dict(
+            {
+                "qualifiedName": "1111-data-entity",
+                "name": "Test Entity",
+                "unmapped_attributes": {"qualifiedName": "1111-data-entity"},
+            },
+        ),
     )
 
-    data_entity.attributes.data_domain = [ObjectId(
-        guid="2222",
-        type_name="m4i_data_domain",
-        unique_attributes=M4IAttributes(
-            qualified_name="2222-domain",
-            unmapped_attributes={"name": "Test Data Domain"},
+    data_entity.attributes.data_domain = [
+        ObjectId(
+            guid="2222",
+            type_name="m4i_data_domain",
+            unique_attributes=M4IAttributes(
+                qualified_name="2222-domain",
+                unmapped_attributes={"name": "Test Data Domain"},
+            ),
         ),
-    )]
+    ]
 
-    data_entity.attributes.attributes = [ObjectId(
-        guid="3333",
-        type_name="m4i_data_attribute",
-        unique_attributes=M4IAttributes(
-            qualified_name="3333-attribute",
-            unmapped_attributes={"name": "Test Data Attribute"},
+    data_entity.attributes.attributes = [
+        ObjectId(
+            guid="3333",
+            type_name="m4i_data_attribute",
+            unique_attributes=M4IAttributes(
+                qualified_name="3333-attribute",
+                unmapped_attributes={"name": "Test Data Attribute"},
+            ),
         ),
-    )]
+    ]
 
     message = EntityMessage(
         type_name="m4i_data_entity",
@@ -286,8 +305,8 @@ def test__handle_entity_created_multiple_relations() -> None:
     )
 
     with patch(
-            "flink_tasks.synchronize_app_search.event_handlers.entity_created.entity_created.get_documents",
-            return_value=[related_1, related_2],
+        "flink_tasks.synchronize_app_search.event_handlers.entity_created.entity_created.get_documents",
+        return_value=[related_1, related_2],
     ):
         result = handle_entity_created(message, Mock(), "test_index")
 
@@ -308,21 +327,25 @@ def test__handle_entity_created_children_breadcrumb() -> None:
     data_entity = BusinessDataEntity(
         guid="1111",
         type_name="m4i_data_entity",
-        attributes=BusinessDataEntityAttributes.from_dict({
-            "qualifiedName": "1111-data-entity",
-            "name": "Test Entity",
-            "unmapped_attributes": {"qualifiedName": "1111-data-entity", "name": "Test Entity"},
-        }),
+        attributes=BusinessDataEntityAttributes.from_dict(
+            {
+                "qualifiedName": "1111-data-entity",
+                "name": "Test Entity",
+                "unmapped_attributes": {"qualifiedName": "1111-data-entity", "name": "Test Entity"},
+            },
+        ),
     )
 
-    data_entity.attributes.attributes = [ObjectId(
-        guid="3333",
-        type_name="m4i_data_attribute",
-        unique_attributes=M4IAttributes(
-            qualified_name="3333-attribute",
-            unmapped_attributes={"name": "Test Data Attribute"},
+    data_entity.attributes.attributes = [
+        ObjectId(
+            guid="3333",
+            type_name="m4i_data_attribute",
+            unique_attributes=M4IAttributes(
+                qualified_name="3333-attribute",
+                unmapped_attributes={"name": "Test Data Attribute"},
+            ),
         ),
-    )]
+    ]
 
     child_relation = AppSearchDocument(
         guid="3333",
@@ -335,8 +358,8 @@ def test__handle_entity_created_children_breadcrumb() -> None:
     )
 
     with patch(
-            "flink_tasks.synchronize_app_search.event_handlers.entity_created.entity_created.get_documents",
-            return_value=[child_relation],
+        "flink_tasks.synchronize_app_search.event_handlers.entity_created.entity_created.get_documents",
+        return_value=[child_relation],
     ):
         breadcrumbs = {
             "breadcrumbname": ["Parent Name"],

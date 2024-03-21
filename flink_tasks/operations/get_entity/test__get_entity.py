@@ -113,7 +113,7 @@ def test_get_entity_process_valid_input_event(
     with patch(__package__ + ".get_entity.get_entity_by_guid", return_value=entity):
         get_entity = GetEntity(
             data_stream=data_stream,
-            atlas_url="test", # atlas_url is not used in the test
+            atlas_url="test",  # atlas_url is not used in the test
             keycloak_factory=keycloak_factory,
             credentials=("username", "password"),
         )
@@ -162,7 +162,7 @@ def test_get_entity_handle_invalid_input_event(
 
     get_entity = GetEntity(
         data_stream=data_stream,
-        atlas_url="test", # atlas_url is not used in the test
+        atlas_url="test",  # atlas_url is not used in the test
         keycloak_factory=keycloak_factory,
         credentials=("username", "password"),
     )
@@ -213,7 +213,7 @@ def test_get_entity_handle_event_without_entity(
 
     get_entity = GetEntity(
         data_stream=data_stream,
-        atlas_url="test", # atlas_url is not used in the test
+        atlas_url="test",  # atlas_url is not used in the test
         keycloak_factory=keycloak_factory,
         credentials=("username", "password"),
     )
@@ -246,7 +246,7 @@ def test_get_entity_handle_http_error_during_entity_lookup(
     with patch(__package__ + ".get_entity.get_entity_by_guid", new=Mock(side_effect=HTTPError())):
         get_entity = GetEntity(
             data_stream=data_stream,
-            atlas_url="test", # atlas_url is not used in the test
+            atlas_url="test",  # atlas_url is not used in the test
             keycloak_factory=keycloak_factory,
             credentials=("username", "password"),
         )
@@ -282,7 +282,7 @@ def test_get_entity_handle_keycloak_error_during_entity_lookup(
     ):
         get_entity = GetEntity(
             data_stream=data_stream,
-            atlas_url="test", # atlas_url is not used in the test
+            atlas_url="test",  # atlas_url is not used in the test
             keycloak_factory=keycloak_factory,
             credentials=("username", "password"),
         )

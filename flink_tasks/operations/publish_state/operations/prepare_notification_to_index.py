@@ -6,6 +6,7 @@ from flink_tasks import EntityVersion
 
 NO_ENTITY_TAG = OutputTag("no_entity")
 
+
 class PrepareNotificationToIndexFunction(MapFunction):
     """
     A custom `MapFunction` to prepare notifications for indexing.

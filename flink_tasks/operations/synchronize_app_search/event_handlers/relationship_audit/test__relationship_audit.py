@@ -96,8 +96,7 @@ def test__handle_relationship_audit_inserted_relationship() -> None:
         ),
     ):
         updated_documents = {
-            document.guid: document
-            for document in handle_relationship_audit(message, Mock(), "test_index")
+            document.guid: document for document in handle_relationship_audit(message, Mock(), "test_index")
         }
 
         assert len(updated_documents) == 2
@@ -210,8 +209,7 @@ def test__handle_relationship_audit_deleted_relationship() -> None:
         ),
     ):
         updated_documents = {
-            document.guid: document
-            for document in handle_relationship_audit(message, Mock(), "test_index")
+            document.guid: document for document in handle_relationship_audit(message, Mock(), "test_index")
         }
 
         assert len(updated_documents) == 2

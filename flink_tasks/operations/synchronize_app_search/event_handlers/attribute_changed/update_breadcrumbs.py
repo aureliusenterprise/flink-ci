@@ -65,7 +65,10 @@ def get_documents(
 
 
 def update_document_breadcrumb(
-    guid: str, name: str, elastic: Elasticsearch, index_name: str,
+    guid: str,
+    name: str,
+    elastic: Elasticsearch,
+    index_name: str,
 ) -> Generator[AppSearchDocument, None, None]:
     """
     Update the breadcrumb information in documents related to a specified entity.

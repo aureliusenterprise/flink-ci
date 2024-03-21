@@ -1,4 +1,3 @@
-
 import pytest
 from m4i_atlas_core import (
     AtlasChangeMessage,

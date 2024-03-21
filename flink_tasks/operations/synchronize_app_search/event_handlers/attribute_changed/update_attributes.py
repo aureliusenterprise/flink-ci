@@ -71,9 +71,7 @@ def handle_update_attributes(
     The function only updates attributes that are in the `ATTRIBUTES_WHITELIST` and have been
     either inserted or changed as indicated by the `EntityMessage`.
     """
-    attributes_to_update = ATTRIBUTES_WHITELIST & (
-        set(message.inserted_attributes) | set(message.changed_attributes)
-    )
+    attributes_to_update = ATTRIBUTES_WHITELIST & (set(message.inserted_attributes) | set(message.changed_attributes))
 
     if len(attributes_to_update) == 0:
         return []

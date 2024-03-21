@@ -105,9 +105,7 @@ class SynchronizeAppSearchFunction(MapFunction):
 
         try:
             result.extend(
-                (doc.guid, doc)
-                for handler in event_handlers
-                for doc in handler(value, self.elastic, self.index_name)
+                (doc.guid, doc) for handler in event_handlers for doc in handler(value, self.elastic, self.index_name)
             )
 
             if event_type == EntityMessageType.ENTITY_DELETED:
