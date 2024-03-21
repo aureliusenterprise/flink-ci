@@ -22,7 +22,7 @@ class RetryError(Exception):
 class RetryStrategy(Protocol):
     """Protocol for defining retry strategies."""
 
-    def sleep(self) -> None:
+    def sleep(self, attempts: int) -> None:
         """Sleep for a duration based on the retry strategy."""
 
 
@@ -32,7 +32,7 @@ class FixedDelay(RetryStrategy):
 
     delay: float
 
-    def sleep(self) -> None:
+    def sleep(self, _: int) -> None:
         """Sleep for a fixed duration."""
         time.sleep(self.delay)
 
@@ -53,13 +53,14 @@ class ExponentialBackoff(RetryStrategy):
             message = "Multiplier must be greater than 1"
             raise ValueError(message)
 
-        self._current_delay = self.initial_delay
-
-    def sleep(self) -> None:
+    def sleep(self, attempts: int) -> None:
         """Sleep for a duration based on the exponential backoff strategy."""
-        time.sleep(self._current_delay)
-        self._current_delay *= self.multiplier
-        self._current_delay += random.uniform(self.jitter[0], self.jitter[1])  # noqa: S311
+        current_delay = functools.reduce(
+            lambda x, _: x * self.multiplier + random.uniform(*self.jitter),  # noqa: S311
+            range(attempts),
+            self.initial_delay,
+        )
+        time.sleep(current_delay)
 
 
 def retry(  # noqa: ANN201
@@ -80,7 +81,7 @@ def retry(  # noqa: ANN201
                     logger.warning("Attempt %d failed", attempts, exc_info=True)
                     if attempts == max_retries:
                         raise RetryError(attempts) from e
-                    retry_strategy.sleep()
+                    retry_strategy.sleep(attempts)
             raise RetryError(attempts)
 
         return wrapper
