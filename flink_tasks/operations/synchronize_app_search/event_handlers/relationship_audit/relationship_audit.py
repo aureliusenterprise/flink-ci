@@ -4,7 +4,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
-from flink_tasks.utils.retry_mechanism import ExponentialBackoff, RetryError, retry
+from flink_tasks.utils import ExponentialBackoff, RetryError, retry
 
 RELATIONSHIP_MAP = {
     "m4i_data_domain": "deriveddatadomain",
@@ -135,7 +135,7 @@ def get_child_documents(
         yield AppSearchDocument.from_dict(search_result["_source"])
 
 
-def handle_deleted_relationships( # noqa: C901
+def handle_deleted_relationships(  # noqa: C901
     message: EntityMessage,
     document: AppSearchDocument,
     elastic: Elasticsearch,
@@ -225,7 +225,7 @@ def handle_deleted_relationships( # noqa: C901
     return updated_documents
 
 
-def handle_inserted_relationships( # noqa: C901
+def handle_inserted_relationships(  # noqa: C901
     message: EntityMessage,
     document: AppSearchDocument,
     elastic: Elasticsearch,
