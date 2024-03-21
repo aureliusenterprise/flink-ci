@@ -162,10 +162,7 @@ def handle_deleted_relationships(
         return updated_documents
 
     deleted_relationships = [
-        rel.guid
-        for rels in message.deleted_relationships.values()
-        for rel in rels
-        if rel.guid is not None
+        rel.guid for rels in message.deleted_relationships.values() for rel in rels if rel.guid is not None
     ]
 
     if not deleted_relationships:
@@ -203,10 +200,11 @@ def handle_deleted_relationships(
     if message.old_value is None:
         return updated_documents
 
-    children = {child.guid for child in message.old_value.get_children() if child.guid is not None}
+    breadcrumb_refs = {child.guid for child in message.old_value.get_children() if child.guid is not None}
+    breadcrumb_refs.add(document.guid) # Add self to the breadcrumb refs in case of child -> parent relationship
 
     for child_document in get_child_documents(
-        list(children.intersection(deleted_relationships)),
+        list(breadcrumb_refs.intersection(deleted_relationships)),
         elastic,
         index_name,
     ):
@@ -219,9 +217,7 @@ def handle_deleted_relationships(
         child_document.breadcrumbguid = child_document.breadcrumbguid[idx + 1 :]
         child_document.breadcrumbname = child_document.breadcrumbname[idx + 1 :]
         child_document.breadcrumbtype = child_document.breadcrumbtype[idx + 1 :]
-        child_document.parentguid = (
-            child_document.breadcrumbguid[-1] if child_document.breadcrumbguid else None
-        )
+        child_document.parentguid = child_document.breadcrumbguid[-1] if child_document.breadcrumbguid else None
 
     return updated_documents
 
@@ -253,10 +249,7 @@ def handle_inserted_relationships(
         return updated_documents
 
     inserted_relationships = [
-        rel.guid
-        for rels in message.inserted_relationships.values()
-        for rel in rels
-        if rel.guid is not None
+        rel.guid for rels in message.inserted_relationships.values() for rel in rels if rel.guid is not None
     ]
 
     if not inserted_relationships:
@@ -290,10 +283,11 @@ def handle_inserted_relationships(
     if message.new_value is None:
         return updated_documents
 
-    children = {child.guid for child in message.new_value.get_children() if child.guid is not None}
+    breadcrumb_refs = {child.guid for child in message.new_value.get_children() if child.guid is not None}
+    breadcrumb_refs.add(document.guid) # Add self to the breadcrumb refs in case of child -> parent relationship
 
     for child_document in get_child_documents(
-        list(children.intersection(inserted_relationships)),
+        list(breadcrumb_refs.intersection(inserted_relationships)),
         elastic,
         index_name,
     ):
@@ -318,9 +312,7 @@ def handle_inserted_relationships(
             *child_document.breadcrumbtype,
         ]
 
-        child_document.parentguid = (
-            child_document.breadcrumbguid[-1] if child_document.breadcrumbguid else None
-        )
+        child_document.parentguid = child_document.breadcrumbguid[-1] if child_document.breadcrumbguid else None
 
         updated_documents[child_document.guid] = child_document
 
@@ -372,8 +364,6 @@ def handle_relationship_audit(
         updated_documents,
     )
 
-    updated_documents[document.guid].parentguid = (
-        document.breadcrumbguid[-1] if document.breadcrumbguid else None
-    )
+    updated_documents[document.guid].parentguid = document.breadcrumbguid[-1] if document.breadcrumbguid else None
 
     return list(updated_documents.values())
