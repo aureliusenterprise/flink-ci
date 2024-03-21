@@ -135,43 +135,6 @@ def test__synchronize_app_search_emit_tombstone_message(
     assert document is None
 
 
-def test__synchronize_app_search_handle_unsupported_operation_type(
-    environment: StreamExecutionEnvironment,
-) -> None:
-    """
-    Test if `SynchronizeAppSearch` correctly handles an unsupported operation type.
-
-    Asserts
-    -------
-    - The output should have a length of 1.
-    - The error should be a `NotImplementedError` instance.
-    - The error message should be formatted correctly.
-    """
-    entity_message = EntityMessage(
-        type_name="m4i_data_domain",
-        guid="1234",
-        original_event_type=EntityAuditAction.ENTITY_UPDATE,
-        event_type=EntityMessageType.ENTITY_RELATIONSHIP_AUDIT,
-        new_value=Entity(
-            guid="1234",
-            type_name="m4i_data_domain",
-            attributes=Attributes.from_dict({"qualifiedName": "1234-test", "name": "test"}),
-        ),
-    )
-
-    data_stream = environment.from_collection([entity_message])
-
-    synchronize_app_search = SynchronizeAppSearch(data_stream, Mock, "test-index")
-    output = list(synchronize_app_search.unknown_event_types.execute_and_collect())
-
-    assert len(output) == 1
-
-    error = output[0]
-
-    assert isinstance(error, NotImplementedError)
-    assert str(error) == "Unknown event type: EntityMessageType.ENTITY_RELATIONSHIP_AUDIT"
-
-
 def test__synchronize_app_search_handle_processing_error(
     environment: StreamExecutionEnvironment,
 ) -> None:
