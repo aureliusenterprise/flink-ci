@@ -89,11 +89,11 @@ def retry(  # noqa: ANN201
             while attempts < max_retries:
                 try:
                     return func(*args, **kwargs)
-                except catch as e:  # noqa: PERF203
+                except catch:  # noqa: PERF203
                     attempts += 1
                     logger.warning("Attempt %d failed", attempts, exc_info=True)
                     if attempts == max_retries:
-                        raise RetryError(attempts) from e
+                        raise
                     retry_strategy.sleep(attempts)
             raise RetryError(attempts)
 
