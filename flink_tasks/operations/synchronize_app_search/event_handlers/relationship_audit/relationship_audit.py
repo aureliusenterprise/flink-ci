@@ -31,6 +31,7 @@ class AppSearchDocumentNotFoundError(SynchronizeAppSearchError):
         """
         super().__init__(f"AppSearchDocument not found for entity {guid}")
 
+
 @retry(retry_strategy=ExponentialBackoff())
 def get_current_document(guid: str, elastic: Elasticsearch, index_name: str) -> AppSearchDocument:
     """
@@ -99,6 +100,7 @@ def get_related_documents(
         raise SynchronizeAppSearchError(message)
 
     return results
+
 
 @retry(retry_strategy=ExponentialBackoff())
 def get_child_documents(
@@ -203,11 +205,17 @@ def handle_deleted_relationships(  # noqa: C901
     if message.old_value is None:
         return updated_documents
 
-    breadcrumb_refs = {child.guid for child in message.old_value.get_children() if child.guid is not None}
-    breadcrumb_refs.add(document.guid)  # Add self to the breadcrumb refs in case of child -> parent relationship
+    breadcrumb_refs = {child.guid for child in message.old_value.get_children() if child.guid is not None}.intersection(
+        deleted_relationships,
+    )
+
+    # Add self to the breadcrumb refs in case of child -> parent relationship
+    parents = set(message.old_value.get_parents())
+    if any(parents.intersection(deleted_relationships)):
+        breadcrumb_refs.add(document.guid)
 
     for child_document in get_child_documents(
-        list(breadcrumb_refs.intersection(deleted_relationships)),
+        breadcrumb_refs,
         elastic,
         index_name,
     ):
@@ -289,8 +297,14 @@ def handle_inserted_relationships(  # noqa: C901
     if message.new_value is None:
         return updated_documents
 
-    breadcrumb_refs = {child.guid for child in message.new_value.get_children() if child.guid is not None}
-    breadcrumb_refs.add(document.guid)  # Add self to the breadcrumb refs in case of child -> parent relationship
+    breadcrumb_refs = {child.guid for child in message.new_value.get_children() if child.guid is not None}.intersection(
+        inserted_relationships,
+    )
+
+    # Add self to the breadcrumb refs in case of child -> parent relationship
+    parents = set(message.new_value.get_parents())
+    if any(parents.intersection(inserted_relationships)):
+        breadcrumb_refs.add(document.guid)
 
     for child_document in get_child_documents(
         list(breadcrumb_refs.intersection(inserted_relationships)),
