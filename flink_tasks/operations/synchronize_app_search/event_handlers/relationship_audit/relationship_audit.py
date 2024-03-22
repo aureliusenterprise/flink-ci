@@ -212,7 +212,7 @@ def handle_deleted_relationships(  # noqa: C901
     }
 
     # Add self to the breadcrumb refs in case of child -> parent relationship
-    parents = set(message.old_value.get_parents())
+    parents = {ref.guid for ref in message.old_value.get_parents() if ref.guid is not None}
     if any(parents.intersection(deleted_relationships)):
         breadcrumb_refs.add(document.guid)
 
@@ -306,7 +306,7 @@ def handle_inserted_relationships(  # noqa: C901
     }
 
     # Add self to the breadcrumb refs in case of child -> parent relationship
-    parents = set(message.new_value.get_parents())
+    parents = {ref.guid for ref in message.new_value.get_parents() if ref.guid is not None}
     if any(parents.intersection(inserted_relationships)):
         breadcrumb_refs.add(document.guid)
 
