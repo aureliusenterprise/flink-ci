@@ -217,7 +217,7 @@ def handle_deleted_relationships(  # noqa: C901
         breadcrumb_refs.add(document.guid)
 
     for child_document in get_child_documents(
-        breadcrumb_refs,
+        list(breadcrumb_refs),
         elastic,
         index_name,
     ):
@@ -311,7 +311,7 @@ def handle_inserted_relationships(  # noqa: C901
         breadcrumb_refs.add(document.guid)
 
     for child_document in get_child_documents(
-        breadcrumb_refs,
+        list(breadcrumb_refs),
         elastic,
         index_name,
     ):
