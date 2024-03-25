@@ -87,6 +87,9 @@ def get_relationships_diff(a: Entity, b: Entity) -> dict[str, list[ObjectId]]:
 
     if a.relationship_attributes is not None:
         for relationships in a.relationship_attributes.values():
+            if not relationships:
+                continue
+
             a_relationships.update(relationship.guid for relationship in relationships)
 
     difference: dict[str, list[ObjectId]] = {}
@@ -95,6 +98,9 @@ def get_relationships_diff(a: Entity, b: Entity) -> dict[str, list[ObjectId]]:
         return difference
 
     for attribute, relationships in b.relationship_attributes.items():
+        if not relationships:
+            continue
+
         difference[attribute] = [
             relationship for relationship in relationships if relationship.guid not in a_relationships
         ]
