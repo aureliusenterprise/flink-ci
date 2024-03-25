@@ -8,6 +8,7 @@ from aiohttp.web import HTTPError
 from m4i_atlas_core import (
     AtlasChangeMessage,
     ConfigStore,
+    EntityAuditAction,
     ExistingEntityTypeException,
     data_dictionary_entity_types,
     get_entity_by_guid,
@@ -119,6 +120,9 @@ class GetEntityFunction(MapFunction):
 
         if entity is None:
             return NO_ENTITY_ERROR_TAG, ValueError(f"No entity found in message. Value={value}")
+
+        if change_message.message.operation_type == EntityAuditAction.ENTITY_DELETE:
+            return change_message
 
         try:
             entity_details = self.loop.run_until_complete(
