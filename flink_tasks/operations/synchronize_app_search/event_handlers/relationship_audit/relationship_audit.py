@@ -84,8 +84,8 @@ def get_related_documents(
     """
     query = {
         "query": {
-            "terms": {
-                "guid": ids,
+            "match": {
+                "guid": ' '.join(ids),
             },
         },
     }
@@ -127,8 +127,8 @@ def get_child_documents(
     """
     query = {
         "query": {
-            "terms": {
-                "breadcrumbguid": ids,
+            "match": {
+                "breadcrumbguid": ' '.join(ids),
             },
         },
     }
@@ -213,8 +213,40 @@ def handle_deleted_relationships(  # noqa: C901
 
     # Add self to the breadcrumb refs in case of child -> parent relationship
     parents = {ref.guid for ref in message.old_value.get_parents() if ref.guid is not None}
-    if any(parents.intersection(deleted_relationships)):
+    remaining_parent_relationships = list(parents.difference(deleted_relationships))
+
+    if len(remaining_parent_relationships) < len(parents):
+        # Add self to the breadcrumb refs in case of child -> parent relationship
         breadcrumb_refs.add(document.guid)
+
+        parent_document = updated_documents[remaining_parent_relationships[0]]
+
+        document.breadcrumbguid = [
+            *parent_document.breadcrumbguid,
+            parent_document.guid,
+        ]
+
+        document.breadcrumbname = [
+            *parent_document.breadcrumbname,
+            parent_document.name,
+        ]
+
+        document.breadcrumbtype = [
+            *parent_document.breadcrumbtype,
+            parent_document.typename,
+        ]
+
+        document.parentguid = parent_document.guid
+
+    elif len(remaining_parent_relationships) == 0:
+        # Add self to the breadcrumb refs in case of child -> parent relationship
+        breadcrumb_refs.add(document.guid)
+
+        document.breadcrumbguid = []
+        document.breadcrumbname = []
+        document.breadcrumbtype = []
+
+        document.parentguid = None
 
     for child_document in get_child_documents(
         list(breadcrumb_refs),
@@ -307,8 +339,32 @@ def handle_inserted_relationships(  # noqa: C901
 
     # Add self to the breadcrumb refs in case of child -> parent relationship
     parents = {ref.guid for ref in message.new_value.get_parents() if ref.guid is not None}
-    if any(parents.intersection(inserted_relationships)):
+
+    # Inserted relationship was a parent relation
+    first_parent = list(parents)[0] if parents else None
+    if first_parent in inserted_relationships:
+        # Add self to the breadcrumb refs in case of child -> parent relationship
         breadcrumb_refs.add(document.guid)
+
+        parent_doc = updated_documents[first_parent]
+
+        document.breadcrumbname = [
+            *document.breadcrumbname,
+            parent_doc.name,
+            *parent_doc.breadcrumbname
+        ]
+        document.breadcrumbguid = [
+            *document.breadcrumbguid,
+            parent_doc.guid,
+            *parent_doc.breadcrumbguid
+        ]
+        document.breadcrumbtype = [
+            *document.breadcrumbtype,
+            parent_doc.typename,
+            *parent_doc.breadcrumbtype
+        ]
+        # update main entity
+        updated_documents[document.guid] = document
 
     for child_document in get_child_documents(
         list(breadcrumb_refs),
@@ -388,6 +444,7 @@ def handle_relationship_audit(
         updated_documents,
     )
 
-    updated_documents[document.guid].parentguid = document.breadcrumbguid[-1] if document.breadcrumbguid else None
+    doc = updated_documents[document.guid]
+    updated_documents[doc.guid].parentguid = doc.breadcrumbguid[-1] if doc.breadcrumbguid else None
 
     return list(updated_documents.values())

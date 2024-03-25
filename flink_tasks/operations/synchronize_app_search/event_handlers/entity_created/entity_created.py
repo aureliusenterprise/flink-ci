@@ -87,18 +87,19 @@ def get_breadcrumbs_of_entity(
     # set default values
     attributes.update({"breadcrumbname": [], "breadcrumbguid": [], "breadcrumbtype": []})
     # Get the first parent of the entity
-    first_parent_guid = [x.guid for x in input_entity.get_parents()][:1]
-    # Look up breadcrumbs of parents
-    query = {"query": {"terms": {"guid": first_parent_guid}}}
+    parents = [x.guid for x in input_entity.get_parents()]
+    if parents:
+        # Look up breadcrumbs of parents
+        query = {"query": {"match": {"guid": parents[0]}}}
 
-    for document in get_documents(query, elastic, index_name):
-        attributes.update(
-            {
-                "breadcrumbname": [*document.breadcrumbname, document.name],
-                "breadcrumbguid": [*document.breadcrumbguid, document.guid],
-                "breadcrumbtype": [*document.breadcrumbtype, document.typename],
-            },
-        )
+        for document in get_documents(query, elastic, index_name):
+            attributes.update(
+                {
+                    "breadcrumbname": [*document.breadcrumbname, document.name],
+                    "breadcrumbguid": [*document.breadcrumbguid, document.guid],
+                    "breadcrumbtype": [*document.breadcrumbtype, document.typename],
+                },
+            )
 
     return attributes
 
@@ -129,7 +130,7 @@ def create_derived_relations(
         A generator yielding AppSearchDocument objects representing the derived relations.
     """
     # Get all related entities of the main entity
-    query = {"query": {"terms": {"guid": referenced}}}
+    query = {"query": {"match": {"guid": ' '.join(referenced)}}}
 
     for document in get_documents(query, elastic, index_name):
         for key in RELATIONSHIP_MAP[entity_details.type_name]:
@@ -174,7 +175,7 @@ def update_children_breadcrumb(
     # A list of children of the main entity
     list_of_children = [x.guid for x in entity_details.get_children()]
     # Find all documents that reference immediate children of the main entity in their breadcrumb
-    query = {"query": {"terms": {"breadcrumbguid": list_of_children}}}
+    query = {"query": {"match": {"breadcrumbguid": ' '.join(list_of_children)}}}
     # Get name of the main entity
     qualified_name = getattr(entity_details.attributes, "qualified_name", "")
     name = getattr(entity_details.attributes, "name", qualified_name)

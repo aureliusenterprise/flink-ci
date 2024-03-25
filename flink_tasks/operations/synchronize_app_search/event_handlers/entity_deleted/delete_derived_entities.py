@@ -85,8 +85,8 @@ def handle_derived_entities_delete(
     # Get the Elasticsearch documents for all related entities
     query = {
         "query": {
-            "terms": {
-                relationship_attribute_guid: [entity_guid],
+            "match": {
+                relationship_attribute_guid: entity_guid,
             },
         },
     }
