@@ -347,21 +347,17 @@ def handle_inserted_relationships(  # noqa: C901
         breadcrumb_refs.add(document.guid)
 
         parent_doc = updated_documents[first_parent]
-
         document.breadcrumbname = [
-            *document.breadcrumbname,
+            *parent_doc.breadcrumbname,
             parent_doc.name,
-            *parent_doc.breadcrumbname
         ]
         document.breadcrumbguid = [
-            *document.breadcrumbguid,
+            *parent_doc.breadcrumbguid,
             parent_doc.guid,
-            *parent_doc.breadcrumbguid
         ]
         document.breadcrumbtype = [
-            *document.breadcrumbtype,
+            *parent_doc.breadcrumbtype,
             parent_doc.typename,
-            *parent_doc.breadcrumbtype
         ]
         # update main entity
         updated_documents[document.guid] = document
