@@ -248,6 +248,25 @@ def handle_deleted_relationships(  # noqa: C901
 
         document.parentguid = None
 
+    immediate_children = {
+        child.guid
+        for child in message.old_value.get_children()
+        if child.guid is not None and child.guid in deleted_relationships
+    }
+    # delete immediate children relation
+    for child_guid in immediate_children:
+        child_document = updated_documents[child_guid]
+
+        # Query guarantees that the breadcrumb includes the guid.
+        idx = child_document.breadcrumbguid.index(document.guid)
+
+        child_document.breadcrumbguid = child_document.breadcrumbguid[idx + 1:]
+        child_document.breadcrumbname = child_document.breadcrumbname[idx + 1:]
+        child_document.breadcrumbtype = child_document.breadcrumbtype[idx + 1:]
+        child_document.parentguid = child_document.breadcrumbguid[-1] if child_document.breadcrumbguid else None
+
+        updated_documents[child_document.guid] = child_document
+
     for child_document in get_child_documents(
         list(breadcrumb_refs),
         elastic,
@@ -339,29 +358,7 @@ def handle_inserted_relationships(  # noqa: C901
         if child.guid is not None and child.guid in inserted_relationships
     }
 
-    # update immediate children
-    for guid in list(breadcrumb_refs):
-        # update children breadcrumb
-        child_doc = updated_documents[guid]
 
-        child_doc.breadcrumbname = [
-            *document.breadcrumbname,
-            document.name
-        ]
-
-        child_doc.breadcrumbguid = [
-            *document.breadcrumbguid,
-            document.guid
-        ]
-
-        child_doc.breadcrumbtype = [
-            *document.breadcrumbtype,
-            document.typename
-        ]
-
-        child_doc.parentguid = document.guid
-
-        updated_documents[guid] = child_doc
 
     # Add self to the breadcrumb refs in case of child -> parent relationship
     parents = {ref.guid for ref in message.new_value.get_parents() if ref.guid is not None}
@@ -387,6 +384,36 @@ def handle_inserted_relationships(  # noqa: C901
         ]
         # update main entity
         updated_documents[document.guid] = document
+
+    immediate_children = {
+        child.guid
+        for child in message.new_value.get_children()
+        if child.guid is not None and child.guid in inserted_relationships
+    }
+
+    # update immediate children
+    for guid in list(immediate_children):
+        # update children breadcrumb
+        child_doc = updated_documents[guid]
+
+        child_doc.breadcrumbname = [
+            *document.breadcrumbname,
+            document.name
+        ]
+
+        child_doc.breadcrumbguid = [
+            *document.breadcrumbguid,
+            document.guid
+        ]
+
+        child_doc.breadcrumbtype = [
+            *document.breadcrumbtype,
+            document.typename
+        ]
+
+        child_doc.parentguid = document.guid
+
+        updated_documents[guid] = child_doc
 
     for child_document in get_child_documents(
         list(breadcrumb_refs),
