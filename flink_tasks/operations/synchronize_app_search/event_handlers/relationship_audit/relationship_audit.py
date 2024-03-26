@@ -370,20 +370,25 @@ def handle_inserted_relationships(  # noqa: C901
         breadcrumb_refs.add(document.guid)
 
         parent_doc = updated_documents[first_parent]
-        document.breadcrumbname = [
-            *parent_doc.breadcrumbname,
-            parent_doc.name,
-        ]
-        document.breadcrumbguid = [
-            *parent_doc.breadcrumbguid,
-            parent_doc.guid,
-        ]
-        document.breadcrumbtype = [
-            *parent_doc.breadcrumbtype,
-            parent_doc.typename,
-        ]
-        # update main entity
-        updated_documents[document.guid] = document
+
+        if parent_doc.guid not in document.breadcrumbguid:
+
+            document.breadcrumbname = [
+                *parent_doc.breadcrumbname,
+                parent_doc.name,
+            ]
+            document.breadcrumbguid = [
+                *parent_doc.breadcrumbguid,
+                parent_doc.guid,
+            ]
+            document.breadcrumbtype = [
+                *parent_doc.breadcrumbtype,
+                parent_doc.typename,
+            ]
+
+            # update main entity
+            updated_documents[document.guid] = document
+
 
     immediate_children = {
         child.guid
@@ -391,10 +396,14 @@ def handle_inserted_relationships(  # noqa: C901
         if child.guid is not None and child.guid in inserted_relationships
     }
 
+
     # update immediate children
     for guid in list(immediate_children):
         # update children breadcrumb
         child_doc = updated_documents[guid]
+
+        if document.guid in child_doc.breadcrumbguid:
+            continue
 
         child_doc.breadcrumbname = [
             *document.breadcrumbname,
@@ -420,8 +429,16 @@ def handle_inserted_relationships(  # noqa: C901
         elastic,
         index_name,
     ):
+
+        if child_document.guid in immediate_children:
+            continue
+
         if child_document.guid in updated_documents:
             child_document = updated_documents[child_document.guid]  # noqa: PLW2901
+
+        # If breadcrumb already contains the id of the current element, skip to avoid cycles in the breadcrumb
+        if document.guid in child_document.breadcrumbguid:
+            continue
 
         child_document.breadcrumbguid = [
             *document.breadcrumbguid,
