@@ -47,7 +47,7 @@ class ExponentialBackoff(RetryStrategy):
     """Exponential backoff retry strategy."""
 
     initial_delay: float = 1
-    multiplier: float = 2
+    multiplier: float = 1.5
     ceil: float = 60
     jitter: tuple[float, float] = (0, 1)
 
