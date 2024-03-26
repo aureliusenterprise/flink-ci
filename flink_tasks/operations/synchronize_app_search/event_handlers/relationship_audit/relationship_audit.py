@@ -264,6 +264,8 @@ def handle_deleted_relationships(  # noqa: C901
         child_document.breadcrumbtype = child_document.breadcrumbtype[idx + 1 :]
         child_document.parentguid = child_document.breadcrumbguid[-1] if child_document.breadcrumbguid else None
 
+        updated_documents[child_document.guid] = child_document
+
     return updated_documents
 
 
@@ -336,6 +338,30 @@ def handle_inserted_relationships(  # noqa: C901
         for child in message.new_value.get_children()
         if child.guid is not None and child.guid in inserted_relationships
     }
+
+    # update immediate children
+    for guid in list(breadcrumb_refs):
+        # update children breadcrumb
+        child_doc = updated_documents[guid]
+
+        child_doc.breadcrumbname = [
+            *document.breadcrumbname,
+            document.name
+        ]
+
+        child_doc.breadcrumbguid = [
+            *document.breadcrumbguid,
+            document.guid
+        ]
+
+        child_doc.breadcrumbtype = [
+            *document.breadcrumbtype,
+            document.typename
+        ]
+
+        child_doc.parentguid = document.guid
+
+        updated_documents[guid] = child_doc
 
     # Add self to the breadcrumb refs in case of child -> parent relationship
     parents = {ref.guid for ref in message.new_value.get_parents() if ref.guid is not None}
