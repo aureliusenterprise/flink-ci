@@ -156,6 +156,8 @@ def handle_update_breadcrumbs(
     """
     updated_attributes = set(message.inserted_attributes) | set(message.changed_attributes)
 
+    logging.info(f"updated_attributes - {message}")
+
     if "name" not in updated_attributes:
         return []
 
@@ -164,9 +166,7 @@ def handle_update_breadcrumbs(
     if entity_details is None:
         raise EntityDataNotProvidedError(message.guid)
 
-    attributes: dict[str, str] = cast(dict, entity_details.attributes.unmapped_attributes)
-
-    entity_name = attributes.get("name")
+    entity_name = entity_details.attributes.name
 
     if entity_name is None:
         raise EntityNameNotFoundError(entity_details.guid)
