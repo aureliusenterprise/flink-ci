@@ -164,8 +164,11 @@ def handle_deleted_relationships(  # noqa: C901
     if message.deleted_relationships is None:
         return updated_documents
 
+    parents = list(message.old_value.get_parents())
+
     deleted_relationships = [
-        rel.guid for rels in message.deleted_relationships.values() for rel in rels if rel.guid is not None
+        rel.guid for rels in message.deleted_relationships.values() for rel in rels
+        if rel.guid is not None and rel.guid not in parents
     ]
 
     if not deleted_relationships:
@@ -315,8 +318,11 @@ def handle_inserted_relationships(  # noqa: C901
     if message.inserted_relationships is None:
         return updated_documents
 
+    parents = list(message.new_value.get_parents())
+
     inserted_relationships = [
-        rel.guid for rels in message.inserted_relationships.values() for rel in rels if rel.guid is not None
+        rel.guid for rels in message.inserted_relationships.values() for rel in rels
+        if rel.guid is not None and rel.guid not in parents
     ]
 
     if not inserted_relationships:
