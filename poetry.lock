@@ -1166,8 +1166,8 @@ dev = ["autodocsumm", "m2r2", "pytest", "pytest-asyncio", "pytest-cov", "recommo
 [package.source]
 type = "git"
 url = "https://github.com/aureliusenterprise/m4i_atlas_core.git"
-reference = "5a705aca37598fab4c12eebcecfa7d4b48ecb9ee"
-resolved_reference = "5a705aca37598fab4c12eebcecfa7d4b48ecb9ee"
+reference = "42fb5db6b41bacaa5668df0df8b4a78a40c69a0e"
+resolved_reference = "42fb5db6b41bacaa5668df0df8b4a78a40c69a0e"
 
 [[package]]
 name = "marshmallow"
@@ -2458,4 +2458,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "b97cd784b317ad9dce907592a60507ec4337bae72e345a9ce18edab9d5de0f9a"
+content-hash = "0cfc9592e724e35ea050bc710e615d024f0b848687c4bbb00ce581db4a745a88"
