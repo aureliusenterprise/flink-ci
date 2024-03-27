@@ -40,8 +40,8 @@ def handle_create_operation(
         raise ValueError(msg)
 
     attributes_dict = entity.attributes.to_dict()
+    del attributes_dict['unmappedAttributes']
     inserted_attributes = list(attributes_dict.keys())
-    del inserted_attributes['unmappedAttributes']
 
     entity_message = EntityMessage.from_change_message(
         change_message=change_message,
