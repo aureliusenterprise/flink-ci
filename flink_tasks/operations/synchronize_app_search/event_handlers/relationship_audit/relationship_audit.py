@@ -14,6 +14,7 @@ RELATIONSHIP_MAP = {
     "m4i_dataset": "deriveddataset",
     "m4i_collection": "derivedcollection",
     "m4i_system": "derivedsystem",
+    "m4i_person": "derivedperson",
 }
 
 
@@ -85,7 +86,7 @@ def get_related_documents(
     query = {
         "query": {
             "match": {
-                "guid": ' '.join(ids),
+                "guid": " ".join(ids),
             },
         },
     }
@@ -128,7 +129,7 @@ def get_child_documents(
     query = {
         "query": {
             "match": {
-                "breadcrumbguid": ' '.join(ids),
+                "breadcrumbguid": " ".join(ids),
             },
         },
     }
@@ -364,7 +365,7 @@ def handle_inserted_relationships(  # noqa: C901
     parents = {ref.guid for ref in message.new_value.get_parents() if ref.guid is not None}
 
     # Inserted relationship was a parent relation
-    first_parent = list(parents)[0] if parents else None
+    first_parent = next(iter(parents)) if parents else None
     if first_parent in inserted_relationships:
         # Add self to the breadcrumb refs in case of child -> parent relationship
         breadcrumb_refs.add(document.guid)
@@ -407,17 +408,17 @@ def handle_inserted_relationships(  # noqa: C901
 
         child_doc.breadcrumbname = [
             *document.breadcrumbname,
-            document.name
+            document.name,
         ]
 
         child_doc.breadcrumbguid = [
             *document.breadcrumbguid,
-            document.guid
+            document.guid,
         ]
 
         child_doc.breadcrumbtype = [
             *document.breadcrumbtype,
-            document.typename
+            document.typename,
         ]
 
         child_doc.parentguid = document.guid

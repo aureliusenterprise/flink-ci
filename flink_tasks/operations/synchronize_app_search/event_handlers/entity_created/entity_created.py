@@ -16,6 +16,7 @@ RELATIONSHIP_MAP = {
     "m4i_dataset": ["deriveddataset"],
     "m4i_collection": ["derivedcollection"],
     "m4i_system": ["derivedsystem"],
+    "m4i_person": ["derivedperson"],
 }
 
 
@@ -130,7 +131,7 @@ def create_derived_relations(
         A generator yielding AppSearchDocument objects representing the derived relations.
     """
     # Get all related entities of the main entity
-    query = {"query": {"match": {"guid": ' '.join(referenced)}}}
+    query = {"query": {"match": {"guid": " ".join(referenced)}}}
 
     for document in get_documents(query, elastic, index_name):
         for key in RELATIONSHIP_MAP[entity_details.type_name]:
@@ -175,7 +176,7 @@ def update_children_breadcrumb(
     # A list of children of the main entity
     list_of_children = [x.guid for x in entity_details.get_children()]
     # Find all documents that reference immediate children of the main entity in their breadcrumb
-    query = {"query": {"match": {"breadcrumbguid": ' '.join(list_of_children)}}}
+    query = {"query": {"match": {"breadcrumbguid": " ".join(list_of_children)}}}
     # Get name of the main entity
     qualified_name = getattr(entity_details.attributes, "qualified_name", "")
     name = getattr(entity_details.attributes, "name", qualified_name)

@@ -123,6 +123,7 @@ RELATIONSHIP_MAP = {
     "m4i_dataset": ["deriveddataset"],
     "m4i_collection": ["derivedcollection"],
     "m4i_system": ["derivedsystem"],
+    "m4i_person": ["derivedperson"],
 }
 
 
