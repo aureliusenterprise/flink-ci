@@ -10,6 +10,7 @@ from m4i_atlas_core import (
     create_type_defs,
     data_dictionary_types_def,
     get_keycloak_token,
+    process_types_def,
 )
 
 
@@ -18,13 +19,13 @@ async def main(access_token: str | None = None) -> None:
     if not access_token:
         access_token = get_keycloak_token()
 
-    try:
-        types_def = await create_type_defs(data_dictionary_types_def, access_token)
-        logging.info("Types created: %s", types_def.to_json())
-    except aiohttp.ClientResponseError as err:
-        if err.status == 409:  # noqa: PLR2004
-            logging.warning("Types already exist. Skipping creation.")
-
+    for defs in [data_dictionary_types_def, process_types_def]:
+        try:
+            types_def = await create_type_defs(defs, access_token)
+            logging.info("Types created: %s", types_def.to_json())
+        except aiohttp.ClientResponseError as err: # noqa: PERF203
+            if err.status == 409:  # noqa: PLR2004
+                logging.warning("Types already exist. Skipping creation.")
 
 if __name__ == "__main__":
     store = ConfigStore.get_instance()
