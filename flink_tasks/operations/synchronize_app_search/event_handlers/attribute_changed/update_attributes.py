@@ -5,7 +5,7 @@ from elasticsearch import Elasticsearch
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
 from flink_tasks.utils import ExponentialBackoff, retry
 
-ATTRIBUTES_WHITELIST = {"definition", "email"}
+ATTRIBUTES_WHITELIST = {"name", "definition", "email"}
 
 
 class AppSearchDocumentNotFoundError(SynchronizeAppSearchError):
