@@ -15,7 +15,7 @@ on:
 
 env:
   # github.repository as <account>/<repo>
-  IMAGE_NAME: aureliusatlas/atlas-post-install
+  IMAGE_NAME: aureliusatlas/docker-flink
 
 
 jobs:
@@ -32,9 +32,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          ssh-key: ${{ secrets.SSH_KEY }}
-          submodules: recursive
 
       # Set up BuildKit Docker container builder to be able to build
       # multi-platform images and export cache
@@ -48,8 +45,8 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
         with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       # Extract metadata (tags, labels) for Docker
       # https://github.com/docker/metadata-action
