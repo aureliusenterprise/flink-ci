@@ -16,7 +16,9 @@ on:
 env:
   # github.repository as <account>/<repo>
   IMAGE_NAME: aureliusatlas/docker-flink
-
+  POETRY_VERSION: "1.6.1"
+  POETRY_VIRTUALENVS_IN_PROJECT: "true"
+  PYTHON_VERSION: "3.10"
 
 jobs:
   build:
@@ -32,6 +34,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}, Poetry and Dependencies
+        uses: packetcoders/action-setup-cache-python-poetry@main
+        with:
+          poetry-version: ${{ env.POETRY_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build Python package
+        run: |
+          poetry build
 
       # Set up BuildKit Docker container builder to be able to build
       # multi-platform images and export cache
