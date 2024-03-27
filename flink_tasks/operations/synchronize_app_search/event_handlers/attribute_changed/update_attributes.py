@@ -86,10 +86,9 @@ def handle_update_attributes(
     if not result.body["found"]:
         raise AppSearchDocumentNotFoundError(entity_details.guid)
 
-    attributes: dict[str, str] = cast(dict, entity_details.attributes.unmapped_attributes)
     document: dict = result.body["_source"]
 
     for attribute in attributes_to_update:
-        document[attribute] = attributes.get(attribute)
+        document[attribute] = getattr(entity_details.attributes, attribute)
 
     return [AppSearchDocument.from_dict(document)]
