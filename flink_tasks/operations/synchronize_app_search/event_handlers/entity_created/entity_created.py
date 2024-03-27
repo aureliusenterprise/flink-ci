@@ -330,10 +330,10 @@ def create_person_handler(
     """
     result = default_create_handler(entity_details, elastic, index_name)
 
-    attributes: dict[str, str] = cast(dict, entity_details.attributes.unmapped_attributes)
+    attributes = entity_details.attributes
 
-    if "email" in attributes:
-        result[0].email = attributes["email"]
+    if hasattr(attributes, "email"):
+        result[0].email = getattr(attributes, "email")
 
     return result
 
