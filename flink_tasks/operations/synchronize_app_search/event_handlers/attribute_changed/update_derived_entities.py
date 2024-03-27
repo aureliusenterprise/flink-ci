@@ -178,8 +178,7 @@ def handle_update_derived_entities(
     if entity_details is None:
         raise EntityDataNotProvidedError(message.guid)
 
-    attributes: dict[str, str] = cast(dict, entity_details.attributes.unmapped_attributes)
-    entity_name = attributes.get("name", "")
+    entity_name = entity_details.attributes.name
     entity_type = entity_details.type_name
 
     handlers = DERIVED_ENTITY_UPDATE_HANDLERS.get(entity_type, [])
