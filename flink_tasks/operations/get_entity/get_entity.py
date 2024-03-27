@@ -12,6 +12,7 @@ from m4i_atlas_core import (
     ExistingEntityTypeException,
     data_dictionary_entity_types,
     get_entity_by_guid,
+    process_entity_types,
     register_atlas_entity_types,
 )
 from marshmallow import ValidationError
@@ -85,6 +86,7 @@ class GetEntityFunction(MapFunction):
 
         with contextlib.suppress(ExistingEntityTypeException):
             register_atlas_entity_types(data_dictionary_entity_types)
+            register_atlas_entity_types(process_entity_types)
 
     def close(self) -> None:
         """Close the event loop."""
