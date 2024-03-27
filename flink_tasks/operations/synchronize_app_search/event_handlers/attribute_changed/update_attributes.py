@@ -1,8 +1,9 @@
-from typing import cast
+import logging
 
 from elasticsearch import Elasticsearch
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
+from flink_tasks.utils import ExponentialBackoff, retry
 
 ATTRIBUTES_WHITELIST = {"definition", "email"}
 
@@ -35,6 +36,42 @@ class EntityDataNotProvidedError(SynchronizeAppSearchError):
             The GUID of the entity for which the data was not provided.
         """
         super().__init__(f"Entity data not provided for entity {guid}")
+
+
+@retry(retry_strategy=ExponentialBackoff())
+def get_document(
+    guid: str,
+    elastic: Elasticsearch,
+    index_name: str,
+) -> AppSearchDocument:
+    """
+    Retrieve an AppSearchDocument from the Elasticsearch index based on the GUID.
+
+    Parameters
+    ----------
+    guid : str
+        The GUID of the entity for which the document is to be retrieved.
+    elastic : Elasticsearch
+        The Elasticsearch client instance to interact with the Elasticsearch index.
+    index_name : str
+        The name of the Elasticsearch index where the entity is stored.
+
+    Returns
+    -------
+    AppSearchDocument
+        The AppSearchDocument instance corresponding to the entity.
+
+    Raises
+    ------
+    AppSearchDocumentNotFoundError
+        If the AppSearchDocument corresponding to the entity is not found in Elasticsearch.
+    """
+    result = elastic.get(index=index_name, id=guid)
+
+    if not result.body["found"]:
+        raise AppSearchDocumentNotFoundError(guid)
+
+    return AppSearchDocument.from_dict(result.body["_source"])
 
 
 def handle_update_attributes(
@@ -73,6 +110,8 @@ def handle_update_attributes(
     """
     attributes_to_update = ATTRIBUTES_WHITELIST & (set(message.inserted_attributes) | set(message.changed_attributes))
 
+    logging.info(f"handle_update_attributes - {message} - {attributes_to_update}")
+
     if len(attributes_to_update) == 0:
         return []
 
@@ -81,14 +120,14 @@ def handle_update_attributes(
     if entity_details is None:
         raise EntityDataNotProvidedError(message.guid)
 
-    result = elastic.get(index=index_name, id=entity_details.guid)
+    result = get_document(message.guid, elastic, index_name)
 
-    if not result.body["found"]:
-        raise AppSearchDocumentNotFoundError(entity_details.guid)
-
-    document: dict = result.body["_source"]
+    logging.info(f"handle_update_attributes - old - {result}")
 
     for attribute in attributes_to_update:
-        document[attribute] = getattr(entity_details.attributes, attribute)
+        value = getattr(entity_details.attributes, attribute)
+        setattr(result, attribute, value)
 
-    return [AppSearchDocument.from_dict(document)]
+    logging.info(f"handle_update_attributes - new - {result}")
+
+    return [result]

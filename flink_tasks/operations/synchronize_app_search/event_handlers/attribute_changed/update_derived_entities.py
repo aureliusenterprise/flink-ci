@@ -1,6 +1,5 @@
 from collections.abc import Generator
 from functools import partial
-from typing import cast
 
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
@@ -22,6 +21,21 @@ class EntityDataNotProvidedError(SynchronizeAppSearchError):
             The GUID of the entity for which the data was not provided.
         """
         super().__init__(f"Entity data not provided for entity {guid}")
+
+
+class EntityNameNotFoundError(SynchronizeAppSearchError):
+    """Exception raised when the entity name is not found in the entity details."""
+
+    def __init__(self, guid: str) -> None:
+        """
+        Initialize the exception.
+
+        Parameters
+        ----------
+        guid : str
+            The GUID of the entity for which the name was not found.
+        """
+        super().__init__(f"Entity name not found for entity {guid}")
 
 
 @retry(retry_strategy=ExponentialBackoff())
@@ -178,7 +192,11 @@ def handle_update_derived_entities(
     if entity_details is None:
         raise EntityDataNotProvidedError(message.guid)
 
-    entity_name = entity_details.attributes.name
+    entity_name = getattr(entity_details.attributes, "name", None)
+
+    if entity_name is None:
+        raise EntityNameNotFoundError(entity_details.guid)
+
     entity_type = entity_details.type_name
 
     handlers = DERIVED_ENTITY_UPDATE_HANDLERS.get(entity_type, [])

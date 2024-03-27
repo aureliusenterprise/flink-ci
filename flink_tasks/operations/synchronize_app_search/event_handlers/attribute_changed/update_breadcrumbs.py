@@ -1,6 +1,5 @@
 import logging
 from collections.abc import Generator
-from typing import cast
 
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
@@ -166,7 +165,7 @@ def handle_update_breadcrumbs(
     if entity_details is None:
         raise EntityDataNotProvidedError(message.guid)
 
-    entity_name = entity_details.attributes.name
+    entity_name = getattr(entity_details.attributes, "name", None)
 
     if entity_name is None:
         raise EntityNameNotFoundError(entity_details.guid)
