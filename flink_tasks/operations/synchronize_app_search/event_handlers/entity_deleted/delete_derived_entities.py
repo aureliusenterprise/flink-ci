@@ -50,13 +50,14 @@ def get_documents(
         yield AppSearchDocument.from_dict(result["_source"])
 
 
-def handle_derived_entities_delete(
+def handle_derived_entities_delete(  # noqa: PLR0913
     entity_guid: str,
     elastic: Elasticsearch,
     index_name: str,
+    updated_documents: dict[str, AppSearchDocument],
     relationship_attribute_guid: str,
     relationship_attribute_name: str,
-) -> Generator[AppSearchDocument, None, None]:
+) -> dict[str, AppSearchDocument]:
     """
     Find related entities in Elasticsearch and update their references to the given entity.
 
@@ -92,6 +93,9 @@ def handle_derived_entities_delete(
     }
 
     for document in get_documents(query, elastic, index_name):
+        if document.guid in updated_documents:
+            document = updated_documents[document.guid]  # noqa: PLW2901
+
         # The query guarantees that the relationship attributes are present in the document.
         # No need for try/except block to handle a potential KeyError.
         guids: list[str] = getattr(document, relationship_attribute_guid)
@@ -106,7 +110,9 @@ def handle_derived_entities_delete(
         del guids[index]
         del names[index]
 
-        yield document
+        updated_documents[document.guid] = document
+
+    return updated_documents
 
 
 """
@@ -153,7 +159,8 @@ def handle_delete_derived_entities(
     message: EntityMessage,
     elastic: Elasticsearch,
     index_name: str,
-) -> list[AppSearchDocument]:
+    updated_documents: dict[str, AppSearchDocument],
+) -> dict[str, AppSearchDocument]:
     """
     Update derived entities in Elasticsearch based on the given EntityMessage.
 
@@ -185,4 +192,7 @@ def handle_delete_derived_entities(
 
     handlers = DERIVED_ENTITY_UPDATE_HANDLERS.get(entity_type, [])
 
-    return [entity for handler in handlers for entity in handler(entity_details.guid, elastic, index_name)]
+    for handler in handlers:
+        handler(entity_details.guid, elastic, index_name, updated_documents)
+
+    return updated_documents

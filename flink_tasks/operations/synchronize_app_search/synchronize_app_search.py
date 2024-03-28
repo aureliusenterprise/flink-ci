@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from functools import reduce
 
 from elasticsearch import Elasticsearch
 from pyflink.datastream import DataStream, MapFunction, OutputTag, RuntimeContext
@@ -21,7 +22,7 @@ from .event_handlers import (
 )
 
 ElasticsearchFactory = Callable[[], Elasticsearch]
-EventHandler = Callable[[EntityMessage, Elasticsearch, str], list[AppSearchDocument]]
+EventHandler = Callable[[EntityMessage, Elasticsearch, str, dict[str, AppSearchDocument]], dict[str, AppSearchDocument]]
 
 EVENT_HANDLERS: dict[EntityMessageType, list[EventHandler]] = {
     EntityMessageType.ENTITY_CREATED: [handle_entity_created],
@@ -93,8 +94,6 @@ class SynchronizeAppSearchFunction(MapFunction):
             A list of tuples containing document GUIDs and documents, or a tuple of an OutputTag and
             an Exception.
         """
-        result: list[tuple[str, AppSearchDocument | None]] = []
-
         event_type = value.event_type
 
         if event_type not in EVENT_HANDLERS:
@@ -103,17 +102,21 @@ class SynchronizeAppSearchFunction(MapFunction):
 
         event_handlers = EVENT_HANDLERS[event_type]
 
+        updated_documents: dict[str, AppSearchDocument] = {}
+
         try:
-            result.extend(
-                (doc.guid, doc) for handler in event_handlers for doc in handler(value, self.elastic, self.index_name)
+            updated_documents = reduce(
+                lambda docs, handler: handler(value, self.elastic, self.index_name, docs),
+                event_handlers,
+                {},
             )
 
             if event_type == EntityMessageType.ENTITY_DELETED:
-                result.append((value.guid, None))
+                updated_documents[value.guid] = None # type: ignore
         except SynchronizeAppSearchError as e:
             return SYNCHRONIZE_APP_SEARCH_ERROR_TAG, e
 
-        return result
+        return list(updated_documents.items())
 
     def close(self) -> None:
         """Close the Elasticsearch client. This method is called when the function is closed."""

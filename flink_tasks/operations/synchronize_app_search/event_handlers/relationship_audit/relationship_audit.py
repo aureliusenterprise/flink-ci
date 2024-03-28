@@ -476,7 +476,8 @@ def handle_relationship_audit(
     message: EntityMessage,
     elastic: Elasticsearch,
     index_name: str,
-) -> list[AppSearchDocument]:
+    updated_documents: dict[str, AppSearchDocument],
+) -> dict[str, AppSearchDocument]:
     """
     Handle the relationship audit event.
 
@@ -495,11 +496,13 @@ def handle_relationship_audit(
         The list of updated AppSearchDocuments.
     """
     if not (message.inserted_relationships or message.deleted_relationships):
-        return []
+        return updated_documents
 
-    document = get_current_document(message.guid, elastic, index_name)
-
-    updated_documents: dict[str, AppSearchDocument] = {document.guid: document}
+    if message.guid in updated_documents:
+        document = updated_documents[message.guid]
+    else:
+        document = get_current_document(message.guid, elastic, index_name)
+        updated_documents[document.guid] = document
 
     updated_documents = handle_deleted_relationships(
         message,
@@ -520,4 +523,4 @@ def handle_relationship_audit(
     doc = updated_documents[document.guid]
     updated_documents[doc.guid].parentguid = doc.breadcrumbguid[-1] if doc.breadcrumbguid else None
 
-    return list(updated_documents.values())
+    return updated_documents

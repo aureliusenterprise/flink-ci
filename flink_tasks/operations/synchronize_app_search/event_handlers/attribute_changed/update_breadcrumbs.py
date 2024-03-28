@@ -70,7 +70,8 @@ def update_document_breadcrumb(
     name: str,
     elastic: Elasticsearch,
     index_name: str,
-) -> Generator[AppSearchDocument, None, None]:
+    updated_documents: dict[str, AppSearchDocument],
+) -> dict[str, AppSearchDocument]:
     """
     Update the breadcrumb information in documents related to a specified entity.
 
@@ -97,6 +98,9 @@ def update_document_breadcrumb(
     query = {"query": {"match": {"breadcrumbguid": guid}}}
 
     for document in get_documents(query, elastic, index_name):
+        if document.guid in updated_documents:
+            document = updated_documents[document.guid]  # noqa: PLW2901
+
         breadcrumb_guid = document.breadcrumbguid
         breadcrumb_name = document.breadcrumbname
 
@@ -119,14 +123,17 @@ def update_document_breadcrumb(
 
         breadcrumb_name[index] = name
 
-        yield document
+        updated_documents[document.guid] = document
+
+    return updated_documents
 
 
 def handle_update_breadcrumbs(
     message: EntityMessage,
     elastic: Elasticsearch,
     index_name: str,
-) -> list[AppSearchDocument]:
+    updated_documents: dict[str, AppSearchDocument],
+) -> dict[str, AppSearchDocument]:
     """
     Handle the update of breadcrumb information in documents based on an entity update message.
 
@@ -158,7 +165,7 @@ def handle_update_breadcrumbs(
     logging.info(f"updated_attributes - {message}")
 
     if "name" not in updated_attributes:
-        return []
+        return updated_documents
 
     entity_details = message.new_value
 
@@ -170,4 +177,4 @@ def handle_update_breadcrumbs(
     if entity_name is None:
         raise EntityNameNotFoundError(entity_details.guid)
 
-    return list(update_document_breadcrumb(entity_details.guid, entity_name, elastic, index_name))
+    return update_document_breadcrumb(entity_details.guid, entity_name, elastic, index_name, updated_documents)

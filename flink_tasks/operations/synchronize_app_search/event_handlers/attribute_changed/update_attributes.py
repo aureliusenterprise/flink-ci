@@ -78,7 +78,8 @@ def handle_update_attributes(
     message: EntityMessage,
     elastic: Elasticsearch,
     index_name: str,
-) -> list[AppSearchDocument]:
+    updated_documents: dict[str, AppSearchDocument],
+) -> dict[str, AppSearchDocument]:
     """
     Update specified attributes for an entity in the Elasticsearch index based on the EntityMessage.
 
@@ -113,14 +114,17 @@ def handle_update_attributes(
     logging.info(f"handle_update_attributes - {message} - {attributes_to_update}")
 
     if len(attributes_to_update) == 0:
-        return []
+        return updated_documents
 
     entity_details = message.new_value
 
     if entity_details is None:
         raise EntityDataNotProvidedError(message.guid)
 
-    result = get_document(message.guid, elastic, index_name)
+    if message.guid in updated_documents:
+        result = updated_documents[message.guid]
+    else:
+        result = get_document(message.guid, elastic, index_name)
 
     logging.info(f"handle_update_attributes - old - {result}")
 
@@ -130,4 +134,4 @@ def handle_update_attributes(
 
     logging.info(f"handle_update_attributes - new - {result}")
 
-    return [result]
+    return updated_documents

@@ -70,6 +70,7 @@ def handle_derived_entities_update(  # noqa: PLR0913
     entity_name: str,
     elastic: Elasticsearch,
     index_name: str,
+    updated_documents: dict[str, AppSearchDocument],
     relationship_attribute_guid: str,
     relationship_attribute_name: str,
 ) -> Generator[AppSearchDocument, None, None]:
@@ -100,6 +101,9 @@ def handle_derived_entities_update(  # noqa: PLR0913
     query = {"query": {"match": {relationship_attribute_guid: entity_guid}}}
 
     for document in get_documents(query, elastic, index_name):
+        if document.guid in updated_documents:
+            document = updated_documents[document.guid]  # noqa: PLW2901
+
         # The query guarantees that the relationship attributes are present in the document.
         # No need for try/except block to handle a potential KeyError.
         guids: list[str] = getattr(document, relationship_attribute_guid)
@@ -159,7 +163,8 @@ def handle_update_derived_entities(
     message: EntityMessage,
     elastic: Elasticsearch,
     index_name: str,
-) -> list[AppSearchDocument]:
+    updated_documents: dict[str, AppSearchDocument],
+) -> dict[str, AppSearchDocument]:
     """
     Update derived entities in Elasticsearch based on the given EntityMessage.
 
@@ -185,7 +190,7 @@ def handle_update_derived_entities(
     updated_attributes = set(message.inserted_attributes) | set(message.changed_attributes)
 
     if "name" not in updated_attributes:
-        return []
+        return updated_documents
 
     entity_details = message.new_value
 
@@ -201,4 +206,7 @@ def handle_update_derived_entities(
 
     handlers = DERIVED_ENTITY_UPDATE_HANDLERS.get(entity_type, [])
 
-    return [entity for handler in handlers for entity in handler(entity_details.guid, entity_name, elastic, index_name)]
+    for handler in handlers:
+        handler(entity_details.guid, entity_name, elastic, index_name, updated_documents)
+
+    return updated_documents
