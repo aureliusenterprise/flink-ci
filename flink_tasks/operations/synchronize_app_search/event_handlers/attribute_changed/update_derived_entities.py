@@ -73,7 +73,7 @@ def handle_derived_entities_update(  # noqa: PLR0913
     updated_documents: dict[str, AppSearchDocument],
     relationship_attribute_guid: str,
     relationship_attribute_name: str,
-) -> Generator[AppSearchDocument, None, None]:
+) -> dict[str, AppSearchDocument]:
     """
     Find related entities in Elasticsearch and update their references to the given entity.
 
@@ -116,7 +116,10 @@ def handle_derived_entities_update(  # noqa: PLR0913
             continue
 
         names[index] = entity_name
-        yield document
+
+        updated_documents[document.guid] = document
+
+    return updated_documents
 
 
 """
