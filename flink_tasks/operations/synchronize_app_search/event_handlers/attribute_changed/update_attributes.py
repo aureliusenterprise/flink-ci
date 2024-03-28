@@ -132,6 +132,6 @@ def handle_update_attributes(
         value = getattr(entity_details.attributes, attribute)
         setattr(result, attribute, value)
 
-    logging.info(f"handle_update_attributes - new - {result}")
+    updated_documents[result.guid] = result
 
     return updated_documents
