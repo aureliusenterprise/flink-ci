@@ -11,7 +11,6 @@ from m4i_atlas_core import (
     create_type_defs,
     data_dictionary_types_def,
     get_keycloak_token,
-    process_types_def,
 )
 
 
@@ -20,7 +19,7 @@ async def main(access_token: str | None = None) -> None:
     if not access_token:
         access_token = get_keycloak_token()
 
-    for types_def in [data_dictionary_types_def, process_types_def]:
+    for types_def in [data_dictionary_types_def]:
         try:
             response = await create_type_defs(types_def, access_token)
             logging.info("Types created: %s", response.to_json())
