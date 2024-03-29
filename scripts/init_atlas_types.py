@@ -27,6 +27,8 @@ async def main(access_token: str | None = None) -> None:
         except aiohttp.ClientResponseError as err:  # noqa: PERF203
             if err.status == 409:  # noqa: PLR2004
                 logging.warning("Types already exist. Skipping creation.")
+            else:
+                raise
 
 
 if __name__ == "__main__":
