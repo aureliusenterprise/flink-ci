@@ -20,10 +20,10 @@ async def main(access_token: str | None = None) -> None:
     if not access_token:
         access_token = get_keycloak_token()
 
-    for type_def in [data_dictionary_types_def, process_types_def]:
+    for types_def in [data_dictionary_types_def, process_types_def]:
         try:
-            types_def = await create_type_defs(type_def, access_token)
-            logging.info("Types created: %s", types_def.to_json())
+            response = await create_type_defs(types_def, access_token)
+            logging.info("Types created: %s", response.to_json())
         except aiohttp.ClientResponseError as err:  # noqa: PERF203
             if err.status == 409:  # noqa: PLR2004
                 logging.warning("Types already exist. Skipping creation.")
