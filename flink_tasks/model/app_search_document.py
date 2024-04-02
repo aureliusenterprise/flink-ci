@@ -65,6 +65,8 @@ class AppSearchDocument(DataClassJsonMixin):
     derivedentityguids: list[str] = field(default_factory=list)
     deriveddatasetguids: list[str] = field(default_factory=list)
     deriveddatasetguid: list[str] = field(default_factory=list)
+    derivedprocess: list[str] = field(default_factory=list)
+    derivedprocessguid: list[str] = field(default_factory=list)
     classificationstext: list[str] = field(default_factory=list)
     qualityguid_uniqueness: list[str] = field(default_factory=list)
     derivedpersonguid: list[str] = field(default_factory=list)
