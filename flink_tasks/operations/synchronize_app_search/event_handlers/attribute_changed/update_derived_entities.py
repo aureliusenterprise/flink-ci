@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Generator
 from functools import partial
 
@@ -100,6 +101,8 @@ def handle_derived_entities_update(  # noqa: PLR0913
     # Get all documents where the entity GUID is present in the relationship field
     query = {"query": {"match": {relationship_attribute_guid: entity_guid}}}
 
+    logging.debug("Searching for documents with entity %s in relationship %s", entity_guid, relationship_attribute_guid)
+
     for document in get_documents(query, elastic, index_name):
         if document.guid in updated_documents:
             document = updated_documents[document.guid]  # noqa: PLW2901
@@ -113,9 +116,17 @@ def handle_derived_entities_update(  # noqa: PLR0913
             index = guids.index(entity_guid)
         except ValueError:
             # Skip this document if the entity GUID is not found
+            logging.exception(
+                "Entity %s not found in relationship %s for document %s. Skipping document update.",
+                entity_guid,
+                relationship_attribute_guid,
+                document.guid,
+            )
             continue
 
         names[index] = entity_name
+
+        logging.info("Updated relationship %s for document %s: %s", relationship_attribute_name, document.guid, names)
 
         updated_documents[document.guid] = document
 
@@ -194,16 +205,19 @@ def handle_update_derived_entities(
     updated_attributes = set(message.inserted_attributes) | set(message.changed_attributes)
 
     if "name" not in updated_attributes:
+        logging.debug("Name not updated. Skipping derived entity update.")
         return updated_documents
 
     entity_details = message.new_value
 
     if entity_details is None:
+        logging.error("Entity data not provided for entity %s", message.guid)
         raise EntityDataNotProvidedError(message.guid)
 
     entity_name = getattr(entity_details.attributes, "name", None)
 
     if entity_name is None:
+        logging.error("Entity name not found for entity %s", message.guid)
         raise EntityNameNotFoundError(entity_details.guid)
 
     entity_type = entity_details.type_name

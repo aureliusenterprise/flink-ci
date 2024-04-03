@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Callable
 from functools import reduce
 
@@ -94,10 +95,13 @@ class SynchronizeAppSearchFunction(MapFunction):
             A list of tuples containing document GUIDs and documents, or a tuple of an OutputTag and
             an Exception.
         """
+        logging.debug("Processing message: %s", value)
+
         event_type = value.event_type
 
         if event_type not in EVENT_HANDLERS:
             message = f"Unknown event type: {event_type}"
+            logging.error(message)
             return UNKNOWN_EVENT_TYPE_TAG, NotImplementedError(message)
 
         event_handlers = EVENT_HANDLERS[event_type]
@@ -112,11 +116,15 @@ class SynchronizeAppSearchFunction(MapFunction):
             )
 
             if event_type == EntityMessageType.ENTITY_DELETED:
-                updated_documents[value.guid] = None # type: ignore
+                updated_documents[value.guid] = None  # type: ignore
         except SynchronizeAppSearchError as e:
             return SYNCHRONIZE_APP_SEARCH_ERROR_TAG, e
 
-        return list(updated_documents.items())
+        result = list(updated_documents.items())
+
+        logging.info("Updated documents: %s", result)
+
+        return result # type: ignore
 
     def close(self) -> None:
         """Close the Elasticsearch client. This method is called when the function is closed."""

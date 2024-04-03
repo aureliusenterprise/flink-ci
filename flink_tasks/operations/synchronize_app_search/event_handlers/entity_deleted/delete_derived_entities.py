@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Generator
 from functools import partial
 
@@ -92,6 +93,12 @@ def handle_derived_entities_delete(  # noqa: PLR0913
         },
     }
 
+    logging.debug(
+        "Searching for documents with relationship %s containing entity %s",
+        relationship_attribute_guid,
+        entity_guid,
+    )
+
     for document in get_documents(query, elastic, index_name):
         if document.guid in updated_documents:
             document = updated_documents[document.guid]  # noqa: PLW2901
@@ -105,10 +112,20 @@ def handle_derived_entities_delete(  # noqa: PLR0913
             index = guids.index(entity_guid)
         except ValueError:
             # Skip this document if the entity GUID is not found
+            logging.exception(
+                "Entity %s not found in relationship %s for document %s. Skipping document update.",
+                entity_guid,
+                relationship_attribute_guid,
+                document.guid,
+            )
             continue
 
         del guids[index]
         del names[index]
+
+        logging.info("Deleted relationship %s for document %s", relationship_attribute_name, document.guid)
+        logging.debug("Updated GUIDs: %s", guids)
+        logging.debug("Updated names: %s", names)
 
         updated_documents[document.guid] = document
 
@@ -187,6 +204,7 @@ def handle_delete_derived_entities(
     entity_details = message.old_value
 
     if entity_details is None:
+        logging.error("Entity data not provided for entity %s", message.guid)
         raise EntityDataNotProvidedError(message.guid)
 
     entity_type = entity_details.type_name

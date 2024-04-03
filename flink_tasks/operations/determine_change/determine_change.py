@@ -1,3 +1,5 @@
+import logging
+
 from pyflink.datastream import DataStream, MapFunction, OutputTag
 
 from flink_tasks import AtlasChangeMessageWithPreviousVersion, EntityMessage
@@ -40,6 +42,7 @@ class DetermineChangeFunction(MapFunction):
 
         if operation_type not in EVENT_HANDLERS:
             message = f"Unknown event type: {operation_type}"
+            logging.error(message)
             return UNKNOWN_EVENT_TYPE_TAG, NotImplementedError(message)
 
         event_handler = EVENT_HANDLERS[operation_type]
@@ -49,7 +52,10 @@ class DetermineChangeFunction(MapFunction):
         try:
             messages = event_handler(value)
         except ValueError as e:
+            logging.exception("Error determining change")
             return DETERMINE_CHANGE_ERROR_TAG, e
+
+        logging.info("Identified changes: %s", messages)
 
         return messages
 

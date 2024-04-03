@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Generator
 from typing import Any
 
@@ -141,6 +142,8 @@ def create_derived_relations(
     # Get all related entities of the main entity
     query = {"query": {"match": {"guid": " ".join(referenced)}}}
 
+    logging.debug("Searching for documents with GUIDs %s", referenced)
+
     for document in get_documents(query, elastic, index_name):
         if document.guid in updated_documents:
             document = updated_documents[document.guid]  # noqa: PLW2901
@@ -158,6 +161,10 @@ def create_derived_relations(
             # Append to the list
             guids.append(entity_details.guid)
             names.append(name)
+
+            logging.info("Updated relationship %s for entity %s", key, document.guid)
+            logging.debug("Relationship ids: %s", guids)
+            logging.debug("Relationship names: %s", names)
 
         updated_documents[document.guid] = document
 
@@ -196,6 +203,8 @@ def update_children_breadcrumb(
     # Find all documents that reference immediate children of the main entity in their breadcrumb
     query = {"query": {"match": {"breadcrumbguid": " ".join(list_of_children)}}}
 
+    logging.debug("Searching for documents with breadcrumb containing %s", list_of_children)
+
     # Get name of the main entity
     qualified_name = getattr(entity_details.attributes, "qualified_name", "")
     name = getattr(entity_details.attributes, "name", qualified_name)
@@ -216,6 +225,11 @@ def update_children_breadcrumb(
             entity_details.type_name,
             *document.breadcrumbtype,
         ]
+
+        logging.info("Updated breadcrumb for entity %s", document.guid)
+        logging.debug("Breadcrumb GUID: %s", document.breadcrumbguid)
+        logging.debug("Breadcrumb Name: %s", document.breadcrumbname)
+        logging.debug("Breadcrumb Type: %s", document.breadcrumbtype)
 
         updated_documents[document.guid] = document
 
@@ -333,6 +347,8 @@ def default_create_handler(
         **references,
     )
 
+    logging.info("Created document for entity %s", entity_details.guid)
+
     return updated_documents
 
 
@@ -364,7 +380,8 @@ def create_person_handler(
     attributes = entity_details.attributes
 
     if hasattr(attributes, "email"):
-        result[entity_details.guid].email = attributes.email
+        logging.debug("Adding email to person entity: %s", entity_details.guid)
+        result[entity_details.guid].email = attributes.email # type: ignore
 
     return result
 
@@ -408,8 +425,8 @@ def handle_entity_created(
     entity_details = message.new_value
 
     if entity_details is None:
+        logging.error("Entity data not provided for entity %s", message.guid)
         raise EntityDataNotProvidedError(message.guid)
-    # END IF
 
     create_handler = ENTITY_CREATED_HANDLERS.get(entity_details.type_name, default_create_handler)
 

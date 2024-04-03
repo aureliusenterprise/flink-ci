@@ -97,6 +97,8 @@ def update_document_breadcrumb(
     # Find all documents that reference the entity in their breadcrumb
     query = {"query": {"match": {"breadcrumbguid": guid}}}
 
+    logging.debug("Searching for documents with breadcrumb containing entity %s", guid)
+
     for document in get_documents(query, elastic, index_name):
         if document.guid in updated_documents:
             document = updated_documents[document.guid]  # noqa: PLW2901
@@ -115,15 +117,26 @@ def update_document_breadcrumb(
             index = breadcrumb_guid.index(guid)
         except ValueError:
             # The guid is not in the breadcrumb. Should not be possible given the query.
+            logging.exception(
+                "Entity %s not found in breadcrumb for document %s. Skipping document update.",
+                guid,
+                document.guid,
+            )
             continue
 
         if breadcrumb_name[index] == name:
             # The name is already correct
+            logging.debug(
+                "Breadcrumb for document %s already has the correct name. Skipping document update.",
+                document.guid,
+            )
             continue
 
         breadcrumb_name[index] = name
 
         updated_documents[document.guid] = document
+
+        logging.info("Updated breadcrumb for document %s: %s", document.guid, breadcrumb_name)
 
     return updated_documents
 
@@ -162,19 +175,20 @@ def handle_update_breadcrumbs(
     """
     updated_attributes = set(message.inserted_attributes) | set(message.changed_attributes)
 
-    logging.info(f"updated_attributes - {message}")
-
     if "name" not in updated_attributes:
+        logging.debug("Name not updated. Skipping breadcrumb update.")
         return updated_documents
 
     entity_details = message.new_value
 
     if entity_details is None:
+        logging.error("Entity data not provided for entity %s", message.guid)
         raise EntityDataNotProvidedError(message.guid)
 
     entity_name = getattr(entity_details.attributes, "name", None)
 
     if entity_name is None:
+        logging.error("Entity name not found for entity %s", entity_details.guid)
         raise EntityNameNotFoundError(entity_details.guid)
 
     return update_document_breadcrumb(entity_details.guid, entity_name, elastic, index_name, updated_documents)

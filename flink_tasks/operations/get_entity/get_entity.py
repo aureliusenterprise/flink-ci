@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import logging
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import cast
@@ -12,7 +13,6 @@ from m4i_atlas_core import (
     ExistingEntityTypeException,
     data_dictionary_entity_types,
     get_entity_by_guid,
-    process_entity_types,
     register_atlas_entity_types,
 )
 from marshmallow import ValidationError
@@ -86,7 +86,6 @@ class GetEntityFunction(MapFunction):
 
         with contextlib.suppress(ExistingEntityTypeException):
             register_atlas_entity_types(data_dictionary_entity_types)
-            register_atlas_entity_types(process_entity_types)
 
     def close(self) -> None:
         """Close the event loop."""
@@ -116,11 +115,15 @@ class GetEntityFunction(MapFunction):
                 AtlasChangeMessage.schema().loads(value, many=False),
             )
         except ValidationError as e:
+            logging.exception("Error deserializing message")
             return SCHEMA_ERROR_TAG, e
+
+        logging.debug("Successfully deserialized message: %s", change_message)
 
         entity = change_message.message.entity
 
         if entity is None:
+            logging.error("No entity found in message: %s", change_message)
             return NO_ENTITY_ERROR_TAG, ValueError(f"No entity found in message. Value={value}")
 
         if change_message.message.operation_type == EntityAuditAction.ENTITY_DELETE:
@@ -136,11 +139,15 @@ class GetEntityFunction(MapFunction):
                 ),
             )
         except HTTPError as e:
+            logging.exception("HTTP error during entity lookup")
             return ENTITY_LOOKUP_ERROR_TAG, RuntimeError(f"HTTP error during entity lookup: {e}")
         except KeycloakError as e:
+            logging.exception("Auth error during entity lookup")
             return ENTITY_LOOKUP_ERROR_TAG, e
 
         change_message.message.entity = entity_details
+
+        logging.debug("Successfully enriched change message: %s", change_message)
 
         return change_message
 

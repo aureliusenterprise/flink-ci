@@ -81,10 +81,11 @@ def update_document_breadcrumb(
     # Find all documents that reference the entity in their breadcrumb
     query = {"query": {"match": {"breadcrumbguid": guid}}}
 
-    for document in get_documents(query, elastic, index_name):
+    logging.debug("Searching for documents with breadcrumb containing entity %s", guid)
 
+    for document in get_documents(query, elastic, index_name):
         if document.guid in updated_documents:
-            document = updated_documents[document.guid] # noqa: PLW2901
+            document = updated_documents[document.guid]  # noqa: PLW2901
 
         breadcrumb_guid = document.breadcrumbguid
         breadcrumb_name = document.breadcrumbname
@@ -104,12 +105,22 @@ def update_document_breadcrumb(
             index = breadcrumb_guid.index(guid)
         except ValueError:
             # The guid is not in the breadcrumb. Should not be possible given the query.
+            logging.exception(
+                "Entity %s not found in breadcrumb for document %s. Skipping document update.",
+                guid,
+                document.guid,
+            )
             continue
 
         # Remove the entity and its parents from the breadcrumb
         document.breadcrumbguid = document.breadcrumbguid[index + 1 :]
         document.breadcrumbname = document.breadcrumbname[index + 1 :]
         document.breadcrumbtype = document.breadcrumbtype[index + 1 :]
+
+        logging.info("Updated breadcrumb for document %s", document.guid)
+        logging.debug("Breadcrumb GUID: %s", document.breadcrumbguid)
+        logging.debug("Breadcrumb Name: %s", document.breadcrumbname)
+        logging.debug("Breadcrumb Type: %s", document.breadcrumbtype)
 
         updated_documents[document.guid] = document
 
@@ -151,6 +162,7 @@ def handle_delete_breadcrumbs(
     entity_details = message.old_value
 
     if entity_details is None:
+        logging.error("Entity data not provided for entity %s", message.guid)
         raise EntityDataNotProvidedError(message.guid)
 
     update_document_breadcrumb(entity_details.guid, elastic, index_name, updated_documents)

@@ -111,14 +111,16 @@ def handle_update_attributes(
     """
     attributes_to_update = ATTRIBUTES_WHITELIST & (set(message.inserted_attributes) | set(message.changed_attributes))
 
-    logging.info(f"handle_update_attributes - {message} - {attributes_to_update}")
+    logging.debug("Attributes to update for entity %s: %s", message.guid, attributes_to_update)
 
     if len(attributes_to_update) == 0:
+        logging.debug("No attributes to update for entity %s", message.guid)
         return updated_documents
 
     entity_details = message.new_value
 
     if entity_details is None:
+        logging.error("Entity data not provided: %s", message)
         raise EntityDataNotProvidedError(message.guid)
 
     if message.guid in updated_documents:
@@ -126,10 +128,9 @@ def handle_update_attributes(
     else:
         result = get_document(message.guid, elastic, index_name)
 
-    logging.info(f"handle_update_attributes - old - {result}")
-
     for attribute in attributes_to_update:
         value = getattr(entity_details.attributes, attribute)
+        logging.info("Updating attribute %s for entity %s to value %s", attribute, message.guid, value)
         setattr(result, attribute, value)
 
     updated_documents[result.guid] = result

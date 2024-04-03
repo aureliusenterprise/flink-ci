@@ -1,4 +1,5 @@
 import json
+import logging
 from collections.abc import Callable
 
 from elasticsearch import ApiError, Elasticsearch
@@ -94,6 +95,7 @@ class GetPreviousEntityFunction(MapFunction):
         entity = value.message.entity
 
         if entity is None:
+            logging.error("Entity is required for lookup: %s", value)
             return NO_ENTITY_ERROR, ValueError("Entity is required for lookup")
 
         result = AtlasChangeMessageWithPreviousVersion(
@@ -148,6 +150,12 @@ class GetPreviousEntityFunction(MapFunction):
             return ELASTICSEARCH_ERROR, ValueError(str(e))
 
         if search_result["hits"]["total"]["value"] == 0:
+            logging.error(
+                "No previous version found for entity %s at %s. (%s)",
+                entity.guid,
+                msg_creation_time,
+                json.dumps(search_result),
+            )
             return NO_PREVIOUS_ENTITY_ERROR, ValueError(
                 f"No previous version found for entity {entity.guid} at {msg_creation_time}. \
                             ({json.dumps(search_result)})",

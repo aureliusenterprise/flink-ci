@@ -1,3 +1,4 @@
+
 from flink_tasks import (
     AtlasChangeMessageWithPreviousVersion,
     EntityMessage,
@@ -41,8 +42,8 @@ def handle_create_operation(
 
     attributes_dict = entity.attributes.to_dict()
 
-    if 'unmappedAttributes' in attributes_dict:
-        del attributes_dict['unmappedAttributes']
+    if "unmappedAttributes" in attributes_dict:
+        del attributes_dict["unmappedAttributes"]
 
     inserted_attributes = list(attributes_dict.keys())
 
