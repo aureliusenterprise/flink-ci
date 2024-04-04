@@ -396,6 +396,7 @@ def handle_inserted_relationships(
 
     """
     Filter out child-parent relationships.
+
     Every relationship change emits two events. One for the parent and one for the child. Only the parent to child
     relationship should be handled to avoid duplicate changes and inconsistencies due to race conditions.
     """
@@ -410,11 +411,7 @@ def handle_inserted_relationships(
         logging.info("No relationships to insert for entity %s", message.guid)
         return transaction
 
-    try:
-        child_documents = find_children(children_to_update, transaction)
-    except RetryError as e:
-        logging.exception("Error retrieving related documents for entity %s", message.guid)
-        raise SynchronizeAppSearchError(message) from e
+    child_documents = find_children(children_to_update, transaction)
 
     for child in child_documents:
         insert_relationship(document, child)
