@@ -193,7 +193,7 @@ def handle_deleted_relationships(  # noqa: C901
         logging.error("Entity data not provided for entity %s", message.guid)
         raise EntityDataNotProvidedError(message.guid)
 
-    parents = list(message.old_value.get_parents())
+    parents = [parent.guid for parent in message.old_value.get_parents()]
 
     deleted_relationships = [
         rel.guid
@@ -381,7 +381,7 @@ def handle_inserted_relationships(  # noqa: C901
         logging.error("Entity data not provided for entity %s", message.guid)
         raise EntityDataNotProvidedError(message.guid)
 
-    parents = list(message.new_value.get_parents())
+    parents = [parent.guid for parent in message.new_value.get_parents()]
 
     inserted_relationships = [
         rel.guid
@@ -390,7 +390,8 @@ def handle_inserted_relationships(  # noqa: C901
         if rel.guid is not None and rel.guid not in parents
     ]
 
-    logging.debug("Relationships to insert: %s", inserted_relationships)
+    logging.info("Relationships to insert: %s", inserted_relationships)
+    logging.info("Parents: %s", parents)
 
     if not inserted_relationships:
         logging.info("No relationships to insert for entity %s", message.guid)
