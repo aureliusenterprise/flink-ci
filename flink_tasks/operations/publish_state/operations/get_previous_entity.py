@@ -3,7 +3,7 @@ import logging
 from collections.abc import Callable
 
 from elasticsearch import ApiError, Elasticsearch
-from m4i_atlas_core import AtlasChangeMessage, Entity, EntityAuditAction
+from m4i_atlas_core import AtlasChangeMessage, Entity, EntityAuditAction, get_entity_type_by_type_name
 from pyflink.datastream import DataStream, MapFunction, OutputTag, RuntimeContext
 
 from flink_tasks import AtlasChangeMessageWithPreviousVersion
@@ -161,9 +161,9 @@ class GetPreviousEntityFunction(MapFunction):
                             ({json.dumps(search_result)})",
             )
 
-        result.previous_version = Entity.from_dict(
-            search_result["hits"]["hits"][0]["_source"],
-        )
+        entity_type = get_entity_type_by_type_name(entity.type_name)
+
+        result.previous_version = entity_type.from_dict(search_result["hits"]["hits"][0]["_source"])
 
         return result
 
