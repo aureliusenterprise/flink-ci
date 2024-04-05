@@ -202,7 +202,7 @@ def handle_deleted_relationships(  # noqa: C901
         if rel.guid is not None and rel.guid not in parents
     ]
 
-    logging.debug("Relationships to delete: %s", deleted_relationships)
+    logging.info("Relationships to delete: %s", deleted_relationships)
 
     if not deleted_relationships:
         logging.info("No relationships to delete for entity %s", message.guid)
@@ -247,6 +247,7 @@ def handle_deleted_relationships(  # noqa: C901
         logging.debug("Updated ids: %s", related_guids)
         logging.debug("Updated names: %s", related_names)
 
+        updated_documents[document.guid] = document
         updated_documents[related_document.guid] = related_document
 
     breadcrumb_refs = {
@@ -255,14 +256,10 @@ def handle_deleted_relationships(  # noqa: C901
         if child.guid is not None and child.guid in deleted_relationships
     }
 
-    # Add self to the breadcrumb refs in case of child -> parent relationship
     parents = {ref.guid for ref in message.old_value.get_parents() if ref.guid is not None}
     remaining_parent_relationships = list(parents.difference(deleted_relationships))
 
     if len(remaining_parent_relationships) < len(parents):
-        # Add self to the breadcrumb refs in case of child -> parent relationship
-        breadcrumb_refs.add(document.guid)
-
         parent_document = updated_documents[remaining_parent_relationships[0]]
 
         document.breadcrumbguid = [
@@ -283,14 +280,13 @@ def handle_deleted_relationships(  # noqa: C901
         document.parentguid = parent_document.guid
 
         logging.info("Set parent of entity %s to %s", document.guid, parent_document.guid)
-        logging.debug("Breadcrumb GUID: %s", document.breadcrumbguid)
-        logging.debug("Breadcrumb Name: %s", document.breadcrumbname)
-        logging.debug("Breadcrumb Type: %s", document.breadcrumbtype)
+        logging.info("Breadcrumb GUID: %s", document.breadcrumbguid)
+        logging.info("Breadcrumb Name: %s", document.breadcrumbname)
+        logging.info("Breadcrumb Type: %s", document.breadcrumbtype)
+
+        updated_documents[document.guid] = document
 
     elif len(remaining_parent_relationships) == 0:
-        # Add self to the breadcrumb refs in case of child -> parent relationship
-        breadcrumb_refs.add(document.guid)
-
         document.breadcrumbguid = []
         document.breadcrumbname = []
         document.breadcrumbtype = []
@@ -299,15 +295,21 @@ def handle_deleted_relationships(  # noqa: C901
 
         logging.info("Removed parent of entity %s", document.guid)
 
+        updated_documents[document.guid] = document
+
     immediate_children = {
         child.guid
         for child in message.old_value.get_children()
         if child.guid is not None and child.guid in deleted_relationships
     }
 
+    logging.info("Immediate children: %s", immediate_children)
+
     # delete immediate children relation
     for child_guid in immediate_children:
         child_document = updated_documents[child_guid]
+
+        logging.info("Set parent relationship of entity %s to %s", child_document.guid, child_document.parentguid)
 
         # Query guarantees that the breadcrumb includes the guid.
         idx = child_document.breadcrumbguid.index(document.guid)
@@ -317,12 +319,13 @@ def handle_deleted_relationships(  # noqa: C901
         child_document.breadcrumbtype = child_document.breadcrumbtype[idx + 1 :]
         child_document.parentguid = child_document.breadcrumbguid[-1] if child_document.breadcrumbguid else None
 
-        logging.info("Set parent relationship of entity %s to %s", child_document.guid, child_document.parentguid)
-        logging.debug("Breadcrumb GUID: %s", child_document.breadcrumbguid)
-        logging.debug("Breadcrumb Name: %s", child_document.breadcrumbname)
-        logging.debug("Breadcrumb Type: %s", child_document.breadcrumbtype)
+        logging.info("Breadcrumb GUID: %s", child_document.breadcrumbguid)
+        logging.info("Breadcrumb Name: %s", child_document.breadcrumbname)
+        logging.info("Breadcrumb Type: %s", child_document.breadcrumbtype)
 
         updated_documents[child_document.guid] = child_document
+
+    logging.info("Deletion operation - breadcrumb_refs %s", list(breadcrumb_refs))
 
     for child_document in get_child_documents(
         list(breadcrumb_refs),
@@ -332,18 +335,23 @@ def handle_deleted_relationships(  # noqa: C901
         if child_document.guid in updated_documents:
             child_document = updated_documents[child_document.guid]  # noqa: PLW2901
 
-        # Query guarantees that the breadcrumb includes the guid.
-        idx = child_document.breadcrumbguid.index(document.guid)
+        logging.info("Set parent relationship of entity %s to %s", child_document.guid, child_document.parentguid)
+
+        try:
+            # Query guarantees that the breadcrumb includes the guid.
+            idx = child_document.breadcrumbguid.index(document.guid)
+        except ValueError:
+            logging.error("Document is not in child document breadcrumb (%s)", child_document.guid)
+            continue
 
         child_document.breadcrumbguid = child_document.breadcrumbguid[idx + 1 :]
         child_document.breadcrumbname = child_document.breadcrumbname[idx + 1 :]
         child_document.breadcrumbtype = child_document.breadcrumbtype[idx + 1 :]
         child_document.parentguid = child_document.breadcrumbguid[-1] if child_document.breadcrumbguid else None
 
-        logging.info("Set parent relationship of entity %s to %s", child_document.guid, child_document.parentguid)
-        logging.debug("Breadcrumb GUID: %s", child_document.breadcrumbguid)
-        logging.debug("Breadcrumb Name: %s", child_document.breadcrumbname)
-        logging.debug("Breadcrumb Type: %s", child_document.breadcrumbtype)
+        logging.info("Breadcrumb GUID: %s", child_document.breadcrumbguid)
+        logging.info("Breadcrumb Name: %s", child_document.breadcrumbname)
+        logging.info("Breadcrumb Type: %s", child_document.breadcrumbtype)
 
         updated_documents[child_document.guid] = child_document
 
@@ -382,6 +390,8 @@ def handle_inserted_relationships(  # noqa: C901
         raise EntityDataNotProvidedError(message.guid)
 
     parents = [parent.guid for parent in message.new_value.get_parents()]
+
+    logging.info("Relationships before filter: %s", message.inserted_relationships)
 
     inserted_relationships = [
         rel.guid
@@ -432,6 +442,7 @@ def handle_inserted_relationships(  # noqa: C901
         logging.debug("Updated ids: %s", related_guids)
         logging.debug("Updated names: %s", related_names)
 
+        updated_documents[document.guid] = document
         updated_documents[related_document.guid] = related_document
 
     if message.new_value is None:
@@ -443,6 +454,8 @@ def handle_inserted_relationships(  # noqa: C901
         if child.guid is not None and child.guid in inserted_relationships
     }
 
+    logging.info("Breadcrumb references: %s", breadcrumb_refs)
+
     # Add self to the breadcrumb refs in case of child -> parent relationship
     parents = {ref.guid for ref in message.new_value.get_parents() if ref.guid is not None}
 
@@ -450,9 +463,6 @@ def handle_inserted_relationships(  # noqa: C901
     first_parent = next(iter(parents)) if parents else None
 
     if first_parent in inserted_relationships:
-        # Add self to the breadcrumb refs in case of child -> parent relationship
-        breadcrumb_refs.add(document.guid)
-
         parent_doc = updated_documents[first_parent]
 
         if parent_doc.guid not in document.breadcrumbguid:
@@ -472,9 +482,9 @@ def handle_inserted_relationships(  # noqa: C901
             document.parentguid = parent_doc.guid
 
             logging.info("Set parent of entity %s to %s", document.guid, parent_doc.guid)
-            logging.debug("Breadcrumb GUID: %s", document.breadcrumbguid)
-            logging.debug("Breadcrumb Name: %s", document.breadcrumbname)
-            logging.debug("Breadcrumb Type: %s", document.breadcrumbtype)
+            logging.info("Breadcrumb GUID: %s", document.breadcrumbguid)
+            logging.info("Breadcrumb Name: %s", document.breadcrumbname)
+            logging.info("Breadcrumb Type: %s", document.breadcrumbtype)
 
             # update main entity
             updated_documents[document.guid] = document
@@ -484,6 +494,8 @@ def handle_inserted_relationships(  # noqa: C901
         for child in message.new_value.get_children()
         if child.guid is not None and child.guid in inserted_relationships
     }
+
+    logging.info("Immediate children %s", immediate_children)
 
     # update immediate children
     for guid in list(immediate_children):
@@ -593,7 +605,6 @@ def handle_relationship_audit(
         document = updated_documents[message.guid]
     else:
         document = get_current_document(message.guid, elastic, index_name)
-        updated_documents[document.guid] = document
 
     updated_documents = handle_deleted_relationships(
         message,
@@ -611,7 +622,8 @@ def handle_relationship_audit(
         updated_documents,
     )
 
-    doc = updated_documents[document.guid]
-    updated_documents[doc.guid].parentguid = doc.breadcrumbguid[-1] if doc.breadcrumbguid else None
+    if document.guid in updated_documents:
+        doc = updated_documents[document.guid]
+        updated_documents[doc.guid].parentguid = doc.breadcrumbguid[-1] if doc.breadcrumbguid else None
 
     return updated_documents
