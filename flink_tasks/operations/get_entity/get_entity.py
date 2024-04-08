@@ -9,6 +9,7 @@ from aiohttp.web import HTTPError
 from m4i_atlas_core import (
     AtlasChangeMessage,
     ConfigStore,
+    Entity,
     EntityAuditAction,
     ExistingEntityTypeException,
     data_dictionary_entity_types,
@@ -19,6 +20,7 @@ from marshmallow import ValidationError
 from pyflink.datastream import DataStream, OutputTag
 from pyflink.datastream.functions import MapFunction, RuntimeContext
 
+from flink_tasks.utils import ExponentialBackoff, retry
 from keycloak import KeycloakError, KeycloakOpenID
 
 # Define output tags for errors that can occur during processing.
@@ -130,14 +132,7 @@ class GetEntityFunction(MapFunction):
             return change_message
 
         try:
-            entity_details = self.loop.run_until_complete(
-                get_entity_by_guid(
-                    guid=entity.guid,
-                    entity_type=entity.type_name,
-                    access_token=self.access_token,
-                    cache_read=False,
-                ),
-            )
+            entity_details = self.get_entity(entity.guid, entity.type_name)
         except HTTPError as e:
             logging.exception("HTTP error during entity lookup")
             return ENTITY_LOOKUP_ERROR_TAG, RuntimeError(f"HTTP error during entity lookup: {e}")
@@ -150,6 +145,32 @@ class GetEntityFunction(MapFunction):
         logging.debug("Successfully enriched change message: %s", change_message)
 
         return change_message
+
+    @retry(retry_strategy=ExponentialBackoff(), catch=(HTTPError, KeycloakError))
+    def get_entity(self, guid: str, entity_type: str) -> Entity:
+        """
+        Get the entity details for the given GUID and entity type.
+
+        Parameters
+        ----------
+        guid : str
+            The GUID of the entity to fetch.
+        entity_type : str
+            The type of the entity to fetch.
+
+        Returns
+        -------
+        Entity
+            The entity details.
+        """
+        return self.loop.run_until_complete(
+            get_entity_by_guid(
+                guid=guid,
+                entity_type=entity_type,
+                access_token=self.access_token,
+                cache_read=False,
+            ),
+        )
 
     @property
     def access_token(self) -> str:
