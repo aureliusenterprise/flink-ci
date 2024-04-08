@@ -151,14 +151,12 @@ class GetPreviousEntityFunction(MapFunction):
 
         if search_result["hits"]["total"]["value"] == 0:
             logging.error(
-                "No previous version found for entity %s at %s. (%s)",
+                "No previous version found for entity %s at %s.",
                 entity.guid,
-                msg_creation_time,
-                json.dumps(search_result),
+                msg_creation_time
             )
             return NO_PREVIOUS_ENTITY_ERROR, ValueError(
-                f"No previous version found for entity {entity.guid} at {msg_creation_time}. \
-                            ({json.dumps(search_result)})",
+                f"No previous version found for entity {entity.guid} at {msg_creation_time}.",
             )
 
         entity_type = get_entity_type_by_type_name(entity.type_name)
