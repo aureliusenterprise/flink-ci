@@ -35,13 +35,13 @@ if __name__ == "__main__":
 
     store.load(
         {
-            "atlas.server.url": "http://localhost:21000/api/atlas",
-            "keycloak.client.id": os.environ.get("KEYCLOAK_CLIENT_ID"),
+            "atlas.server.url": os.environ.get("ATLAS_URL", "http://localhost:21000/api/atlas"),
+            "keycloak.client.id": os.environ.get("KEYCLOAK_CLIENT_ID", "m4i_public"),
             "keycloak.credentials.username": os.environ.get("KEYCLOAK_USERNAME", "admin"),
             "keycloak.credentials.password": os.environ.get("KEYCLOAK_PASSWORD", "admin"),
-            "keycloak.realm.name": os.environ.get("KEYCLOAK_REALM_NAME"),
+            "keycloak.realm.name": os.environ.get("KEYCLOAK_REALM_NAME", "m4i"),
             "keycloak.client.secret.key": os.environ.get("KEYCLOAK_CLIENT_SECRET_KEY"),
-            "keycloak.server.url": "http://localhost:8180/auth/",
+            "keycloak.server.url": os.environ.get("KEYCLOAK_URL", "http://localhost:8180/auth/"),
         },
     )
 
