@@ -1,4 +1,3 @@
-import json
 import logging
 from collections.abc import Callable
 
@@ -7,6 +6,7 @@ from m4i_atlas_core import AtlasChangeMessage, Entity, EntityAuditAction, get_en
 from pyflink.datastream import DataStream, MapFunction, OutputTag, RuntimeContext
 
 from flink_tasks import AtlasChangeMessageWithPreviousVersion
+from flink_tasks.utils import ExponentialBackoff, retry
 
 ElasticsearchFactory = Callable[[], Elasticsearch]
 
@@ -116,18 +116,38 @@ class GetPreviousEntityFunction(MapFunction):
 
         msg_creation_time = value.msg_creation_time
 
+        try:
+            result.previous_version = self.get_previous_entity(entity, msg_creation_time)
+        except ApiError as e:
+            return ELASTICSEARCH_ERROR, ValueError(str(e))
+        except ElasticPreviousStateRetrieveError as e:
+            return NO_PREVIOUS_ENTITY_ERROR, e
+
+        return result
+
+    def close(self) -> None:
+        """Close the Elasticsearch client."""
+        self.elasticsearch.close()
+
+    @retry(retry_strategy=ExponentialBackoff(), catch=(ApiError, ElasticPreviousStateRetrieveError))
+    def get_previous_entity(
+        self,
+        current_version: Entity,
+        timestamp: int,
+    ) -> Entity:
+        """Retrieve the previous version of an entity from ElasticSearch."""
         query = {
             "bool": {
                 "filter": [
                     {
                         "match": {
-                            "guid.keyword": entity.guid,
+                            "guid.keyword": current_version.guid,
                         },
                     },
                     {
                         "range": {
                             "updateTime": {
-                                "lte": msg_creation_time,
+                                "lte": timestamp,
                             },
                         },
                     },
@@ -139,35 +159,20 @@ class GetPreviousEntityFunction(MapFunction):
             "updateTime": {"numeric_type": "long", "order": "desc"},
         }
 
-        try:
-            search_result = self.elasticsearch.search(
-                index=self.index_name,
-                query=query,
-                sort=sort,
-                size=1,
-            )
-        except ApiError as e:
-            return ELASTICSEARCH_ERROR, ValueError(str(e))
+        search_result = self.elasticsearch.search(
+            index=self.index_name,
+            query=query,
+            sort=sort,
+            size=1,
+        )
 
         if search_result["hits"]["total"]["value"] == 0:
-            logging.error(
-                "No previous version found for entity %s at %s.",
-                entity.guid,
-                msg_creation_time
-            )
-            return NO_PREVIOUS_ENTITY_ERROR, ValueError(
-                f"No previous version found for entity {entity.guid} at {msg_creation_time}.",
-            )
+            logging.error("No previous version found for entity %s at %s.", current_version.guid, timestamp)
+            raise ElasticPreviousStateRetrieveError(current_version.guid, timestamp)
 
-        entity_type = get_entity_type_by_type_name(entity.type_name)
+        entity_type = get_entity_type_by_type_name(current_version.type_name)
 
-        result.previous_version = entity_type.from_dict(search_result["hits"]["hits"][0]["_source"])
-
-        return result
-
-    def close(self) -> None:
-        """Close the Elasticsearch client."""
-        self.elasticsearch.close()
+        return entity_type.from_dict(search_result["hits"]["hits"][0]["_source"])
 
 
 class GetPreviousEntity:
