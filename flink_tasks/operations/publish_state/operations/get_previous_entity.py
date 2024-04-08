@@ -121,7 +121,7 @@ class GetPreviousEntityFunction(MapFunction):
         except ApiError as e:
             return ELASTICSEARCH_ERROR, ValueError(str(e))
         except ElasticPreviousStateRetrieveError as e:
-            return NO_PREVIOUS_ENTITY_ERROR, e
+            return NO_PREVIOUS_ENTITY_ERROR, RuntimeError(str(e))
 
         return result
 
