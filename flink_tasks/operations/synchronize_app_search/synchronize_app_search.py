@@ -95,7 +95,7 @@ class SynchronizeAppSearchFunction(MapFunction):
             A list of tuples containing document GUIDs and documents, or a tuple of an OutputTag and
             an Exception.
         """
-        logging.debug("Processing message: %s", value)
+        logging.info("Processing message: %s", value)
 
         event_type = value.event_type
 
@@ -124,7 +124,7 @@ class SynchronizeAppSearchFunction(MapFunction):
 
         logging.info("Updated documents: %s", result)
 
-        return result # type: ignore
+        return result  # type: ignore
 
     def close(self) -> None:
         """Close the Elasticsearch client. This method is called when the function is closed."""
