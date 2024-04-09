@@ -48,16 +48,16 @@ class PublishState:
         """
         self.data_stream = data_stream
 
+        # Initialize the stage for preparing the validated notifications for indexing.
+        self.index_preparation = PrepareNotificationToIndex(
+            self.data_stream,
+        )
+
         # Initialize the stage for retrieving the previous entity versions from a database.
         self.previous_entity_retrieval = GetPreviousEntity(
             self.data_stream,
             elastic_factory,
             index_name,
-        )
-
-        # Initialize the stage for preparing the validated notifications for indexing.
-        self.index_preparation = PrepareNotificationToIndex(
-            self.data_stream,
         )
 
         # Aggregate the errors from the various processing stages.
