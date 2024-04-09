@@ -77,7 +77,7 @@ class ExponentialBackoff(RetryStrategy):
 
 def retry(  # noqa: ANN201
     retry_strategy: RetryStrategy,
-    catch: tuple[type[Exception], ...] = (Exception,),
+    catch: type[Exception] | tuple[type[Exception], ...] = Exception,
     max_retries: int = 5,
 ):
     """
@@ -96,8 +96,8 @@ def retry(  # noqa: ANN201
     ----------
     retry_strategy : RetryStrategy
         The retry strategy to use, which must implement the `RetryStrategy` protocol.
-    catch : tuple[type[Exception], ...], optional
-        A tuple of exception types that should be caught and retried. Defaults to catching all exceptions.
+    catch : type[Exception] | tuple[type[Exception], ...], optional
+        A (tuple of) exception types that should be caught and retried. Defaults to catching all exceptions.
     max_retries : int, optional
         The maximum number of retries before giving up and raising a `RetryError`. Defaults to 5.
 
