@@ -38,7 +38,7 @@ if __name__ == "__main__":
             "atlas.server.url": os.environ.get("ATLAS_SERVER_URL"),
             "keycloak.client.id": os.environ.get("KEYCLOAK_CLIENT_ID"),
             "keycloak.credentials.username": os.environ.get("KEYCLOAK_USERNAME"),
-            "keycloak.credentials.password": os.environ.get("KEYCLOAK_ATLAS_USER_PASSWORD"),
+            "keycloak.credentials.password": os.environ.get("KEYCLOAK_ATLAS_ADMIN_PASSWORD"),
             "keycloak.realm.name": os.environ.get("KEYCLOAK_REALM_NAME"),
             "keycloak.client.secret.key": os.environ.get("KEYCLOAK_CLIENT_SECRET_KEY"),
             "keycloak.server.url": os.environ.get("KEYCLOAK_SERVER_URL"),
