@@ -15,6 +15,7 @@ from m4i_atlas_core import (
     data_dictionary_entity_types,
     get_entity_by_guid,
     register_atlas_entity_types,
+    UnknownEntityTypeException
 )
 from marshmallow import ValidationError
 from pyflink.datastream import DataStream, OutputTag
@@ -27,6 +28,7 @@ from keycloak import KeycloakError, KeycloakOpenID
 ENTITY_LOOKUP_ERROR_TAG = OutputTag("entity_lookup_error")
 NO_ENTITY_ERROR_TAG = OutputTag("no_entity")
 SCHEMA_ERROR_TAG = OutputTag("schema_error")
+UNKNOWN_TYPE = OutputTag("unknown_entity_type")
 
 # A type alias for a factory function that produces instances of KeycloakOpenID.
 KeycloakFactory = Callable[[], KeycloakOpenID]
@@ -139,10 +141,13 @@ class GetEntityFunction(MapFunction):
         except KeycloakError as e:
             logging.exception("Auth error during entity lookup")
             return ENTITY_LOOKUP_ERROR_TAG, e
+        except UnknownEntityTypeException as e:
+            logging.exception(f"Unknown type for entity: {change_message}")
+            return UNKNOWN_TYPE, e
 
         change_message.message.entity = entity_details
 
-        logging.debug("Successfully enriched change message: %s", change_message)
+        logging.info("Successfully enriched change message: %s", change_message)
 
         return change_message
 

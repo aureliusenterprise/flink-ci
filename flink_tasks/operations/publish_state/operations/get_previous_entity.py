@@ -116,6 +116,8 @@ class GetPreviousEntityFunction(MapFunction):
             spooled=value.spooled,
         )
 
+        logging.info(f"AtlasChangeMessage: {value}")
+
         msg_creation_time = value.msg_creation_time
 
         try:
