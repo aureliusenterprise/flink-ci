@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from elasticsearch import ApiError, Elasticsearch
 from m4i_atlas_core import AtlasChangeMessage, Entity, EntityAuditAction, get_entity_type_by_type_name
@@ -11,29 +12,33 @@ from flink_tasks.utils import ExponentialBackoff, retry
 ElasticsearchFactory = Callable[[], Elasticsearch]
 
 ELASTICSEARCH_ERROR = OutputTag("elastic_error")
+NEWER_VERSION_ERROR = OutputTag("newer_version")
 NO_ENTITY_ERROR = OutputTag("no_entity")
 NO_PREVIOUS_ENTITY_ERROR = OutputTag("no_previous_entity")
 
 
+@dataclass
 class ElasticPreviousStateRetrieveError(Exception):
     """Exception raised for errors in the retrieval of previous state from ElasticSearch."""
 
-    def __init__(self, guid: str, creation_time: int) -> None:
-        """
-        Initialize the ElasticPreviousStateRetrieveError exception.
+    guid: str
+    timestamp: int
 
-        Parameters
-        ----------
-        guid : str
-            The GUID for which the retrieval of previous state failed.
-        creation_time : int
-            The creation time for which the retrieval of previous state failed.
-        """
-        message = f"Failed to retrieve pervious state for guid {guid} and time {creation_time}"
-        super().__init__(message)
 
-        self.guid = guid
-        self.creation_time = creation_time
+class NoPreviousVersionError(ElasticPreviousStateRetrieveError):
+    """Exception raised for errors in the retrieval of previous state from ElasticSearch."""
+
+    def __str__(self) -> str:
+        """Return a string representation of the error."""
+        return f"No previous version found for entity {self.guid} at {self.timestamp}."
+
+
+class NewerVersionError(ElasticPreviousStateRetrieveError):
+    """Exception raised when a newer version of an entity is found in ElasticSearch."""
+
+    def __str__(self) -> str:
+        """Return a string representation of the error."""
+        return f"Newer version found for entity {self.guid} at {self.timestamp}."
 
 
 class GetPreviousEntityFunction(MapFunction):
@@ -111,21 +116,21 @@ class GetPreviousEntityFunction(MapFunction):
             spooled=value.spooled,
         )
 
-        if value.message.operation_type == EntityAuditAction.ENTITY_CREATE:
-            return result
-
         msg_creation_time = value.msg_creation_time
 
         try:
             result.previous_version = self.get_previous_entity(entity, msg_creation_time)
         except ApiError as e:
             return ELASTICSEARCH_ERROR, ValueError(str(e))
-        except ElasticPreviousStateRetrieveError as e:
-            if value.message.operation_type == EntityAuditAction.ENTITY_UPDATE:
+        except NoPreviousVersionError as e:
+            if value.message.operation_type == EntityAuditAction.ENTITY_CREATE:
+                pass
+            elif value.message.operation_type == EntityAuditAction.ENTITY_UPDATE:
                 value.message.operation_type = EntityAuditAction.ENTITY_CREATE
             else:
-                return NO_PREVIOUS_ENTITY_ERROR, RuntimeError(str(e))
-
+                return NO_PREVIOUS_ENTITY_ERROR, e
+        except NewerVersionError as e:
+            return NEWER_VERSION_ERROR, e
         return result
 
     def close(self) -> None:
@@ -147,13 +152,6 @@ class GetPreviousEntityFunction(MapFunction):
                             "guid.keyword": current_version.guid,
                         },
                     },
-                    {
-                        "range": {
-                            "updateTime": {
-                                "lte": timestamp,
-                            },
-                        },
-                    },
                 ],
             },
         }
@@ -171,11 +169,20 @@ class GetPreviousEntityFunction(MapFunction):
 
         if search_result["hits"]["total"]["value"] == 0:
             logging.error("No previous version found for entity %s at %s.", current_version.guid, timestamp)
-            raise ElasticPreviousStateRetrieveError(current_version.guid, timestamp)
+            raise NoPreviousVersionError(current_version.guid, timestamp)
 
         entity_type = get_entity_type_by_type_name(current_version.type_name)
 
-        return entity_type.from_dict(search_result["hits"]["hits"][0]["_source"])
+        entity = entity_type.from_dict(search_result["hits"]["hits"][0]["_source"])
+        if entity.update_time is not None and entity.update_time >= timestamp:
+            logging.error(
+                "Previous version found for entity %s at %s is newer than the current version.",
+                current_version.guid,
+                timestamp,
+            )
+            raise NewerVersionError(current_version.guid, timestamp)
+
+        return entity
 
 
 class GetPreviousEntity:
@@ -228,11 +235,12 @@ class GetPreviousEntity:
         )
 
         self.elastic_errors = self.main.get_side_output(ELASTICSEARCH_ERROR).name("elastic_errors")
-
+        self.newer_version_errors = self.main.get_side_output(NEWER_VERSION_ERROR).name("newer_version_errors")
         self.no_previous_entity_errors = self.main.get_side_output(NO_PREVIOUS_ENTITY_ERROR).name(
             "no_previous_entity_errors",
         )
 
         self.errors = self.elastic_errors.union(
+            self.newer_version_errors,
             self.no_previous_entity_errors,
         )
