@@ -121,7 +121,10 @@ class GetPreviousEntityFunction(MapFunction):
         except ApiError as e:
             return ELASTICSEARCH_ERROR, ValueError(str(e))
         except ElasticPreviousStateRetrieveError as e:
-            return NO_PREVIOUS_ENTITY_ERROR, RuntimeError(str(e))
+            if value.message.operation_type == EntityAuditAction.ENTITY_UPDATE:
+                value.message.operation_type = EntityAuditAction.ENTITY_CREATE
+            else:
+                return NO_PREVIOUS_ENTITY_ERROR, RuntimeError(str(e))
 
         return result
 
@@ -129,7 +132,7 @@ class GetPreviousEntityFunction(MapFunction):
         """Close the Elasticsearch client."""
         self.elasticsearch.close()
 
-    @retry(retry_strategy=ExponentialBackoff(), catch=(ApiError, ElasticPreviousStateRetrieveError))
+    @retry(retry_strategy=ExponentialBackoff(), catch=ApiError)
     def get_previous_entity(
         self,
         current_version: Entity,
