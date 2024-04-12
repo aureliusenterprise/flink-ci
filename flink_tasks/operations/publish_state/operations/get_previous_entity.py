@@ -116,6 +116,9 @@ class GetPreviousEntityFunction(MapFunction):
             spooled=value.spooled,
         )
 
+        if value.message.operation_type == EntityAuditAction.ENTITY_CREATE:
+            return result
+
         logging.info(f"AtlasChangeMessage: {value}")
 
         msg_creation_time = value.msg_creation_time
@@ -125,21 +128,17 @@ class GetPreviousEntityFunction(MapFunction):
         except ApiError as e:
             return ELASTICSEARCH_ERROR, ValueError(str(e))
         except NoPreviousVersionError as e:
-            if value.message.operation_type == EntityAuditAction.ENTITY_CREATE:
-                pass
-            elif value.message.operation_type == EntityAuditAction.ENTITY_UPDATE:
-                value.message.operation_type = EntityAuditAction.ENTITY_CREATE
-            else:
-                return NO_PREVIOUS_ENTITY_ERROR, e
+            return NO_PREVIOUS_ENTITY_ERROR, e
         except NewerVersionError as e:
             return NEWER_VERSION_ERROR, e
+
         return result
 
     def close(self) -> None:
         """Close the Elasticsearch client."""
         self.elasticsearch.close()
 
-    @retry(retry_strategy=ExponentialBackoff(), catch=ApiError)
+    @retry(retry_strategy=ExponentialBackoff(), catch=(ApiError, NoPreviousVersionError))
     def get_previous_entity(
         self,
         current_version: Entity,
