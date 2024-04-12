@@ -28,8 +28,27 @@ ENTITY_LOOKUP_ERROR_TAG = OutputTag("entity_lookup_error")
 NO_ENTITY_ERROR_TAG = OutputTag("no_entity")
 SCHEMA_ERROR_TAG = OutputTag("schema_error")
 
+
+ENTITY_CREATE_TAG = OutputTag("entity_create")
+ENTITY_UPDATE_TAG = OutputTag("entity_update")
+ENTITY_DELETE_TAG = OutputTag("entity_delete")
+
 # A type alias for a factory function that produces instances of KeycloakOpenID.
 KeycloakFactory = Callable[[], KeycloakOpenID]
+
+
+class SplitByEventType(MapFunction):
+    """A PyFlink map function that directs incoming messages to side outputs by their operation type."""
+
+    def map(self, value: AtlasChangeMessage) -> None | tuple[OutputTag, AtlasChangeMessage]:
+        """Direct the incoming message to the appropriate side output based on the operation type."""
+        if value.message.operation_type == EntityAuditAction.ENTITY_CREATE:
+            return ENTITY_CREATE_TAG, value
+        if value.message.operation_type == EntityAuditAction.ENTITY_UPDATE:
+            return ENTITY_UPDATE_TAG, value
+        if value.message.operation_type == EntityAuditAction.ENTITY_DELETE:
+            return ENTITY_DELETE_TAG, value
+        return None
 
 
 class GetEntityFunction(MapFunction):
@@ -247,6 +266,12 @@ class GetEntity:
         self.main = self.data_stream.map(
             GetEntityFunction(atlas_url, keycloak_factory, credentials),
         ).name("enriched_entities")
+
+        split_by_event_type = self.main.map(SplitByEventType()).name("split_by_event_type")
+
+        self.entity_create = split_by_event_type.get_side_output(ENTITY_CREATE_TAG).name("entity_create")
+        self.entity_update = split_by_event_type.get_side_output(ENTITY_UPDATE_TAG).name("entity_update")
+        self.entity_delete = split_by_event_type.get_side_output(ENTITY_DELETE_TAG).name("entity_delete")
 
         self.entity_lookup_errors = self.main.get_side_output(ENTITY_LOOKUP_ERROR_TAG).name(
             "entity_lookup_errors",

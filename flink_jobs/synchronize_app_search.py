@@ -170,50 +170,55 @@ def main(config: SynchronizeAppSearchConfig) -> None:
         (config["keycloak_username"], config["keycloak_password"]),
     )
 
-    publish_state = PublishState(
-        get_entity.main,
-        create_elasticsearch_client,
-        config["elasticsearch_publish_state_index_name"],
-    )
+    branches = [get_entity.entity_create, get_entity.entity_update, get_entity.entity_delete]
 
-    determine_change = DetermineChange(publish_state.previous_entity_retrieval.main)
+    for branch in branches:
+        publish_state = PublishState(
+            branch,
+            create_elasticsearch_client,
+            config["elasticsearch_publish_state_index_name"],
+        )
 
-    synchronize_app_search = SynchronizeAppSearch(
-        determine_change.main,
-        create_elasticsearch_client,
-        config["elasticsearch_app_search_index_name"],
-    )
+        determine_change = DetermineChange(publish_state.previous_entity_retrieval.main)
 
-    publish_state.index_preparation.main.map(
-        lambda document: json.dumps(
-            {
-                "id": document.doc_id,
-                "value": json.loads(document.body.to_json()),
-            },
-        ),
-        Types.STRING(),
-    ).sink_to(publish_state_sink).name("Publish State Sink")
+        synchronize_app_search = SynchronizeAppSearch(
+            determine_change.main,
+            create_elasticsearch_client,
+            config["elasticsearch_app_search_index_name"],
+        )
 
-    synchronize_app_search.main.map(
-        lambda document: json.dumps(
-            {
-                "id": document[0],
-                "value": document[1] if document[1] is None else document[1].to_dict(),
-            },
-        ),
-        Types.STRING(),
-    ).sink_to(app_search_sink).name("App Search Sink")
+        publish_state.index_preparation.main.map(
+            lambda document: json.dumps(
+                {
+                    "id": document.doc_id,
+                    "value": json.loads(document.body.to_json()),
+                },
+            ),
+            Types.STRING(),
+        ).sink_to(publish_state_sink).name("Publish State Sink")
 
-    get_entity.errors.union(
-        publish_state.errors,
-        determine_change.errors,
-        synchronize_app_search.errors,
-    ).map(
+        synchronize_app_search.main.map(
+            lambda document: json.dumps(
+                {
+                    "id": document[0],
+                    "value": document[1] if document[1] is None else document[1].to_dict(),
+                },
+            ),
+            Types.STRING(),
+        ).sink_to(app_search_sink)
+
+        publish_state.errors.union(
+            determine_change.errors,
+            synchronize_app_search.errors,
+        ).map(
+            lambda err: json.dumps({"error": type(err).__name__, "message": str(err)}),
+            Types.STRING(),
+        ).sink_to(error_sink)
+
+    get_entity.errors.map(
         lambda err: json.dumps({"error": type(err).__name__, "message": str(err)}),
         Types.STRING(),
-    ).sink_to(
-        error_sink,
-    ).name("Error Sink")
+    ).sink_to(error_sink)
 
     env.execute("Synchronize App Search")
 
