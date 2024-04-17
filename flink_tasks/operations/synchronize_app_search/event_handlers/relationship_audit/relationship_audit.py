@@ -208,11 +208,14 @@ def handle_deleted_relationships(  # noqa: C901
         logging.info("No relationships to delete for entity %s", message.guid)
         return updated_documents
 
+    related_documents = []
+
     try:
         related_documents = get_related_documents(deleted_relationships, elastic, index_name)
     except RetryError as e:
-        logging.exception("Error retrieving related documents for entity %s. %s", message.guid, e)
-        raise SynchronizeAppSearchError(message) from e
+        logging.warning("Error retrieving related documents for entity %s", message.guid)
+    except SynchronizeAppSearchError as e:
+        logging.warning("Gave up retrieving all documents %s.", e)
 
     for related_document in related_documents:
         if related_document.guid in updated_documents:

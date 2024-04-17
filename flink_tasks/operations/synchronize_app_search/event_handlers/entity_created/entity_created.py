@@ -96,11 +96,14 @@ def default_create_handler(
     logging.info("Relationships to insert: %s", inserted_relationships)
     logging.info("Parents: %s", parents)
 
+    related_documents = []
+
     try:
         related_documents = get_related_documents(inserted_relationships, elastic, index_name)
     except RetryError as e:
-        logging.exception("Error retrieving related documents for entity %s. %s", message.guid, e)
-        raise SynchronizeAppSearchError(message) from e
+        logging.warning("Error retrieving related documents for entity %s.", message.guid)
+    except SynchronizeAppSearchError as e:
+        logging.warning("Gave up retrieving all documents %s.", e)
 
     logging.info("Found related documents: %s", (doc.id for doc in related_documents))
 
