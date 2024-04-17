@@ -30,6 +30,9 @@ COPY ./flink_jobs /opt/flink/py_libs/flink_jobs
 COPY ./dist/*.whl /opt/flink/py_libs/
 RUN mkdir /opt/flink/py_libs/scripts/
 COPY ./scripts/*.py /opt/flink/py_libs/scripts/
+COPY ./scripts/*.zip /opt/flink/py_libs/scripts/
+COPY ./scripts/*.sh /opt/flink/py_libs/scripts/
+
 
 RUN python -m pip install --no-cache-dir /opt/flink/py_libs/*.whl && \
     rm -rf /opt/flink/py_libs/*.whl && \
