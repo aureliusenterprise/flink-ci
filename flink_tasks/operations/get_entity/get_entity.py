@@ -252,15 +252,3 @@ class GetEntity:
         self.main = self.data_stream.map(
             GetEntityFunction(atlas_url, keycloak_factory, credentials),
         ).name("enriched_entities")
-
-        self.entity_lookup_errors = self.main.get_side_output(ENTITY_LOOKUP_ERROR_TAG).name(
-            "entity_lookup_errors",
-        )
-
-        self.no_entity_errors = self.main.get_side_output(NO_ENTITY_ERROR_TAG).name(
-            "no_entity_errors",
-        )
-
-        self.schema_errors = self.main.get_side_output(SCHEMA_ERROR_TAG).name("schema_errors")
-
-        self.errors = self.entity_lookup_errors.union(self.no_entity_errors, self.schema_errors)

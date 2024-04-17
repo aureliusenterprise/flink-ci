@@ -79,7 +79,7 @@ def get_current_document(guid: str, elastic: Elasticsearch, index_name: str) -> 
     return AppSearchDocument.from_dict(result.body["_source"])
 
 
-@retry(retry_strategy=ExponentialBackoff())
+@retry(retry_strategy=ExponentialBackoff(), max_retries=3)
 def get_related_documents(
     ids: list[str],
     elastic: Elasticsearch,
@@ -110,7 +110,7 @@ def get_related_documents(
         },
     }
 
-    logging.debug("Searching for related documents with ids %s", ids)
+    logging.info("Searching for related documents with %s", query)
 
     results = [
         AppSearchDocument.from_dict(search_result["_source"])
@@ -118,8 +118,8 @@ def get_related_documents(
     ]
 
     if len(results) != len(ids):
-        message = "Some related documents were not found in the index"
-        logging.error(message)
+        message = f"Some related documents were not found in the index. ({results}/{ids})"
+        logging.warning(message)
         raise SynchronizeAppSearchError(message)
 
     return results
@@ -211,7 +211,7 @@ def handle_deleted_relationships(  # noqa: C901
     try:
         related_documents = get_related_documents(deleted_relationships, elastic, index_name)
     except RetryError as e:
-        logging.exception("Error retrieving related documents for entity %s", message.guid)
+        logging.exception("Error retrieving related documents for entity %s. %s", message.guid, e)
         raise SynchronizeAppSearchError(message) from e
 
     for related_document in related_documents:

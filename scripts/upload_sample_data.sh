@@ -6,5 +6,5 @@ TOKEN=`curl -d 'client_id=m4i_public' -d "username=$KEYCLOAK_ATLAS_USER_USERNAME
 curl -g -v -X POST -H "Authorization: Bearer ${TOKEN:1:-1}" \
                 -H "Content-Type: multipart/form-data" \
                 -H "Cache-Control: no-cache" \
-                -F data=@response.zip \
+                -F data=@small.zip \
                 "${ATLAS_EXTERNAL_URL}/admin/import"

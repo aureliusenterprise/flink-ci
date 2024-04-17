@@ -79,7 +79,7 @@ class SynchronizeAppSearchFunction(MapFunction):
 
     def map(
         self,
-        value: EntityMessage,
+        value: EntityMessage | Exception,
     ) -> list[tuple[str, AppSearchDocument | None]] | tuple[OutputTag, Exception]:
         """
         Process an EntityMessage and perform actions based on the type of change event.
@@ -95,7 +95,11 @@ class SynchronizeAppSearchFunction(MapFunction):
             A list of tuples containing document GUIDs and documents, or a tuple of an OutputTag and
             an Exception.
         """
-        logging.info("Processing message: %s", value)
+        logging.info("SynchronizeAppSearchFunction: %s", value)
+
+        if isinstance(value, Exception):
+            logging.error("Passing down error: %s", value)
+            return SYNCHRONIZE_APP_SEARCH_ERROR_TAG, value
 
         event_type = value.event_type
 
@@ -152,10 +156,10 @@ class SynchronizeAppSearch:
     """
 
     def __init__(
-        self,
-        data_stream: DataStream,
-        elastic_factory: ElasticsearchFactory,
-        index_name: str,
+            self,
+            data_stream: DataStream,
+            elastic_factory: ElasticsearchFactory,
+            index_name: str,
     ) -> None:
         self.data_stream = data_stream
 
@@ -163,16 +167,10 @@ class SynchronizeAppSearch:
             SynchronizeAppSearchFunction(elastic_factory, index_name),
         ).name("synchronize_app_search")
 
-        self.unknown_event_types = self.app_search_documents.get_side_output(
-            UNKNOWN_EVENT_TYPE_TAG,
-        ).name("unknown_event_types")
-
-        self.synchronize_app_search_errors = self.app_search_documents.get_side_output(
-            SYNCHRONIZE_APP_SEARCH_ERROR_TAG,
-        ).name("synchronize_app_search_errors")
-
         self.main = self.app_search_documents.flat_map(
-            lambda documents: (document for document in documents),
+            lambda documents: (
+                document for document in documents if
+                isinstance(document, tuple) and len(document) > 1 and isinstance(document[1], AppSearchDocument)
+            )
         ).name("app_search_documents")
 
-        self.errors = self.unknown_event_types.union(self.synchronize_app_search_errors)

@@ -17,7 +17,7 @@ class PrepareNotificationToIndexFunction(MapFunction):
     object suitable for indexing.
     """
 
-    def map(self, value: AtlasChangeMessage) -> EntityVersion | tuple[OutputTag, Exception]:
+    def map(self, value: AtlasChangeMessage | tuple[OutputTag, any]) -> EntityVersion | Exception:
         """
         Transform a ValidatedInput message into an EntityVersion object.
 
@@ -31,14 +31,19 @@ class PrepareNotificationToIndexFunction(MapFunction):
         EntityVersion
             The transformed message, ready for indexing.
         """
+        logging.info("PrepareNotificationToIndexFunction %s", value)
+
+        if isinstance(value, tuple):
+            return value[1]
+
         msg_creation_time = value.msg_creation_time
         event_time = value.message.event_time
         entity = value.message.entity
-        entity.update_time = int(1000*time.time())
+        entity.update_time = msg_creation_time
 
         if entity is None:
             logging.error("Entity is required for indexing: %s", value)
-            return NO_ENTITY_TAG, ValueError("Entity is required for indexing")
+            return ValueError("Entity is required for indexing")
 
         doc_id = f"{entity.guid}_{msg_creation_time}"
 
@@ -80,4 +85,6 @@ class PrepareNotificationToIndex:
             "index_preparation",
         )
 
-        self.errors = self.main.get_side_output(NO_ENTITY_TAG).name("no_entity_error")
+        self.main = self.main.flat_map(
+            lambda x: [x] if isinstance(x, EntityVersion) else []
+        )
