@@ -82,9 +82,14 @@ def default_create_handler(
 
     parents = [parent.guid for parent in message.new_value.get_parents()]
 
+    logging.info("Parents: %s", parents)
     logging.info("Relationships before filter: %s", message.inserted_relationships)
 
-    inserted = message.inserted_relationships.values() if message.inserted_relationships else []
+    inserted = [
+        value for value in message.inserted_relationships.values() if value is not None
+    ] if message.inserted_relationships else []
+
+    logging.info("Relationships before filter (values): %s", inserted)
 
     inserted_relationships = [
         rel.guid
@@ -94,7 +99,6 @@ def default_create_handler(
     ]
 
     logging.info("Relationships to insert: %s", inserted_relationships)
-    logging.info("Parents: %s", parents)
 
     related_documents = []
 
@@ -105,7 +109,7 @@ def default_create_handler(
     except SynchronizeAppSearchError as e:
         logging.warning("Gave up retrieving all documents %s.", e)
 
-    logging.info("Found related documents: %s", (doc.id for doc in related_documents))
+    logging.info("Found related documents: %s", [doc.id for doc in related_documents])
 
     for related_document in related_documents:
         if related_document.guid in updated_documents:
