@@ -84,7 +84,6 @@ def default_create_handler(
     parents = [parent.guid for parent in message.new_value.get_parents()]
 
     logging.info("Parents: %s", parents)
-    logging.info("Relationships before filter: %s", message.inserted_relationships)
 
     inserted = [
         value for value in message.inserted_relationships.values() if value is not None
