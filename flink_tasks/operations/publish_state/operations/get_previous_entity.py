@@ -1,4 +1,5 @@
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -7,6 +8,7 @@ from m4i_atlas_core import AtlasChangeMessage, Entity, EntityAuditAction, get_en
 from pyflink.datastream import DataStream, MapFunction, OutputTag, RuntimeContext
 
 from flink_tasks import AtlasChangeMessageWithPreviousVersion
+from flink_tasks.operations.publish_state.operations.delayed_map import DelayedMap
 from flink_tasks.utils import ExponentialBackoff, retry
 
 ElasticsearchFactory = Callable[[], Elasticsearch]
@@ -220,6 +222,6 @@ class GetPreviousEntity:
         self.input_stream = input_stream
         self.elastic_factory = elastic_factory
 
-        self.main = self.input_stream.map(
+        self.main = self.input_stream.map(DelayedMap()).map(
             GetPreviousEntityFunction(elastic_factory, index_name),
         ).name("previous_entity_lookup")
