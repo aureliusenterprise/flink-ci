@@ -5,6 +5,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
+from flink_tasks.model.synchronize_app_search_error_with_payload import SynchronizeAppSearchErrorWithPayload
 from flink_tasks.utils import ExponentialBackoff, RetryError, retry
 
 RELATIONSHIP_MAP = {
@@ -120,7 +121,7 @@ def get_related_documents(
     if len(results) != len(ids):
         message = f"Some related documents were not found in the index. ({results}/{ids})"
         logging.warning(message)
-        raise SynchronizeAppSearchError(message)
+        raise SynchronizeAppSearchErrorWithPayload(message, results)
 
     return results
 
@@ -214,7 +215,8 @@ def handle_deleted_relationships(  # noqa: C901
         related_documents = get_related_documents(deleted_relationships, elastic, index_name)
     except RetryError as e:
         logging.warning("Error retrieving related documents for entity %s", message.guid)
-    except SynchronizeAppSearchError as e:
+    except SynchronizeAppSearchErrorWithPayload as e:
+        related_documents = e.partial_result
         logging.warning("Gave up retrieving all documents %s.", e)
 
     for related_document in related_documents:

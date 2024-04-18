@@ -4,6 +4,7 @@ from elasticsearch import Elasticsearch
 from m4i_atlas_core import Entity
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
+from flink_tasks.model.synchronize_app_search_error_with_payload import SynchronizeAppSearchErrorWithPayload
 from flink_tasks.operations.synchronize_app_search.event_handlers.relationship_audit.relationship_audit import (
     get_child_documents,
     get_related_documents,
@@ -106,7 +107,8 @@ def default_create_handler(
         related_documents = get_related_documents(inserted_relationships, elastic, index_name)
     except RetryError as e:
         logging.warning("Error retrieving related documents for entity %s.", message.guid)
-    except SynchronizeAppSearchError as e:
+    except SynchronizeAppSearchErrorWithPayload as e:
+        related_documents = e.partial_result
         logging.warning("Gave up retrieving all documents %s.", e)
 
     logging.info("Found related documents: %s", [doc.id for doc in related_documents])
