@@ -111,7 +111,7 @@ def default_create_handler(
         related_documents = e.partial_result
         logging.warning("Gave up retrieving all documents %s.", e)
 
-    logging.info("Found related documents: %s", [doc.id for doc in related_documents])
+    logging.info("Found related documents: %s", related_documents)
 
     for related_document in related_documents:
         if related_document.guid in updated_documents:
