@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from pathlib import Path
 from typing import TypedDict
 
@@ -100,7 +101,7 @@ def main(config: SynchronizeAppSearchConfig) -> None:
     )
 
     # Set up the Kafka sink
-    app_search_sink = (
+    app_search_sink: KafkaSink = (
         KafkaSink.builder()
         .set_bootstrap_servers(kafka_bootstrap_server)
         .set_record_serializer(
@@ -115,6 +116,8 @@ def main(config: SynchronizeAppSearchConfig) -> None:
             .build(),
         )
         .set_delivery_guarantee(DeliveryGuarantee.AT_LEAST_ONCE)
+        .set_property("batch.size", "1")
+        .set_property("linger.ms", "0")
         .build()
     )
 
@@ -170,7 +173,12 @@ def main(config: SynchronizeAppSearchConfig) -> None:
         config["elasticsearch_app_search_index_name"],
     )
 
-    synchronize_app_search.main.map(
+    def waiting_mapper(value):
+        # To avoid racing condition, introduce a second sleep
+        time.sleep(0.5)
+        return value
+
+    synchronize_app_search.main.map(waiting_mapper).map(
         lambda document: json.dumps(
             {
                 "id": document[0],
