@@ -5,6 +5,7 @@ from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import cast
 
+from aiohttp import ClientResponseError
 from aiohttp.web import HTTPError
 from m4i_atlas_core import (
     AtlasChangeMessage,
@@ -127,8 +128,21 @@ class GetEntityFunction(MapFunction):
         entity = change_message.message.entity
 
         if entity is None:
-            logging.error("No entity found in message: %s", change_message)
+            logging.warning("No entity found in message: %s", change_message)
             return NO_ENTITY_ERROR_TAG, ValueError(f"No entity found in message. Value={value}")
+
+        # Skipping types: m4i_source
+        if entity.type_name == "m4i_source":
+            logging.warning("Ignoring type: m4i_source, at %s", entity.guid)
+            return UNKNOWN_TYPE, ValueError("Ignoring type: m4i_source")
+
+        if change_message.message.operation_type not in [
+            EntityAuditAction.ENTITY_CREATE,
+            EntityAuditAction.ENTITY_UPDATE,
+            EntityAuditAction.ENTITY_DELETE
+        ]:
+            logging.warning("Ignoring message type: %s", change_message.message.operation_type)
+            return UNKNOWN_TYPE, ValueError("Ignoring message type")
 
         if change_message.message.operation_type == EntityAuditAction.ENTITY_DELETE:
             return change_message
@@ -142,16 +156,23 @@ class GetEntityFunction(MapFunction):
             logging.exception("Auth error during entity lookup")
             return ENTITY_LOOKUP_ERROR_TAG, e
         except UnknownEntityTypeException as e:
-            logging.exception(f"Unknown type for entity: {change_message}")
+            logging.exception("Unknown type for entity: %s", change_message)
             return UNKNOWN_TYPE, e
+        except ClientResponseError as e:
+            logging.exception("Can not find entity in atlas: %s", change_message)
+            return ENTITY_LOOKUP_ERROR_TAG, RuntimeError(f"HTTP error during entity lookup: {e}")
 
         change_message.message.entity = entity_details
 
-        logging.info("Successfully enriched change message: %s", change_message)
+        logging.info(
+            "Successfully enriched change message. GUID = %s, TYPE = %s",
+            entity_details.guid,
+            entity_details.type_name
+        )
 
         return change_message
 
-    @retry(retry_strategy=ExponentialBackoff(), catch=(HTTPError, KeycloakError))
+    @retry(retry_strategy=ExponentialBackoff(), catch=(HTTPError, KeycloakError, ClientResponseError), max_retries=2)
     def get_entity(self, guid: str, entity_type: str) -> Entity:
         """
         Get the entity details for the given GUID and entity type.
