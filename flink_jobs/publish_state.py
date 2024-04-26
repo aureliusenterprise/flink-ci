@@ -27,7 +27,7 @@ class PublishStateConfig(TypedDict):
     ----------
     elasticsearch_app_search_index_name: str
         The name of the index in Elasticsearch to which app search documents are synchronized.
-    elasticsearch_state_index_name: str
+    elasticsearch_publish_state_index_name: str
         The name of the index in Elasticsearch to which entity state is synchronized.
     elasticsearch_endpoint: str
         The endpoint URL for the Elasticsearch instance.
