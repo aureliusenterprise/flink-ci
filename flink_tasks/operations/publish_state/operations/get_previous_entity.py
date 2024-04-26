@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from elasticsearch import ApiError, Elasticsearch
 from m4i_atlas_core import AtlasChangeMessage, Entity, EntityAuditAction, get_entity_type_by_type_name
-from pyflink.datastream import DataStream, MapFunction, OutputTag, RuntimeContext
+from pyflink.datastream import DataStream, MapFunction, RuntimeContext
 
 from flink_tasks import AtlasChangeMessageWithPreviousVersion
 from flink_tasks.operations.publish_state.operations.delayed_map import DelayedMap
@@ -89,7 +89,7 @@ class GetPreviousEntityFunction(MapFunction):
         if isinstance(value, Exception):
             return value
 
-        logging.debug(f"AtlasChangeMessage: {value}")
+        logging.debug("AtlasChangeMessage: %s", value)
 
         entity = value.message.entity
 
@@ -141,7 +141,7 @@ class GetPreviousEntityFunction(MapFunction):
                         "match": {
                             "guid.keyword": {
                                 "query": current_version.guid,
-                                "operator": "and"
+                                "operator": "and",
                             },
 
                         },
@@ -169,13 +169,13 @@ class GetPreviousEntityFunction(MapFunction):
         )
 
         if search_result["hits"]["total"]["value"] == 0:
-            logging.error("No previous version found for entity %s at %s. (%s)", current_version.guid, timestamp, int(1000*time.time()))
+            logging.error("No previous version found for entity %s at %s. (%s)",
+                          current_version.guid, timestamp, int(1000*time.time()))
             raise NoPreviousVersionError(current_version.guid, timestamp)
 
         entity_type = get_entity_type_by_type_name(current_version.type_name)
 
-        entity = entity_type.from_dict(search_result["hits"]["hits"][0]["_source"])
-        return entity
+        return entity_type.from_dict(search_result["hits"]["hits"][0]["_source"])
 
 
 class GetPreviousEntity:

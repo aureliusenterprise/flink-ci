@@ -90,8 +90,8 @@ def handle_derived_entities_delete(  # noqa: PLR0913
             "match": {
                 relationship_attribute_guid: {
                     "query": entity_guid,
-                    "operator": "and"
-                }
+                    "operator": "and",
+                },
             },
         },
     }

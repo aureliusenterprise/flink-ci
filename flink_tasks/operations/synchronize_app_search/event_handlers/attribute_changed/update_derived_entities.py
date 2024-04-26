@@ -101,7 +101,7 @@ def handle_derived_entities_update(  # noqa: PLR0913
     # Get all documents where the entity GUID is present in the relationship field
     query = {"query": {"match": {relationship_attribute_guid: {"query": entity_guid, "operator": "and"}}}}
 
-    logging.info("Searching for documents with entity %s in relationship %s. %s", entity_guid, relationship_attribute_guid, query)
+    logging.info("Searching for documents by %s", query)
 
     for document in get_documents(query, elastic, index_name):
         if document.guid in updated_documents:

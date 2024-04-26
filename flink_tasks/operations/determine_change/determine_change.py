@@ -38,7 +38,6 @@ class DetermineChangeFunction(MapFunction):
             Returns a list of `EntityMessage` if changes are successfully determined, or a tuple
             containing `OutputTag` and `Exception` if an error occurs during processing.
         """
-
         logging.debug("DetermineChangeFunction: %s", value)
 
         if isinstance(value, Exception):

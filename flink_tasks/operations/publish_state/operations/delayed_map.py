@@ -1,18 +1,34 @@
 import logging
 import time
+
 from pyflink.datastream import MapFunction
+
+from flink_tasks.model.app_search_document import AppSearchDocument
 
 
 class DelayedMap(MapFunction):
-    """ DelayedMap delays events, in case we are importing from Apache Atlas """
+    """DelayedMap delays events, in case we are importing from Apache Atlas."""
 
-    def __init__(self):
-        super(DelayedMap, self).__init__()
+    def __init__(self) -> None:
+        super().__init__()
         self.last_timestamp = None
         self.time_to_sleep_s = 1
         self.time_between_messages_ms = 500
 
-    def map(self, value):
+    def map(self, value: AppSearchDocument | Exception) -> AppSearchDocument | Exception:
+        """
+        Delay the incoming message so documents are already written in Elastic search.
+
+        Parameters
+        ----------
+        value : AppSearchDocument | Exception
+            The incoming message.
+
+        Returns
+        -------
+        AppSearchDocument | Exception
+            Returns the message unchanged with a delay.
+        """
         if isinstance(value, Exception):
             return value
 

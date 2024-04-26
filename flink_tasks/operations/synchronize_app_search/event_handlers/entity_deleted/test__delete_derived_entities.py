@@ -52,11 +52,11 @@ def test__handle_delete_derived_entities_update_document() -> None:
         __package__ + ".delete_derived_entities.get_documents",
         return_value=[document_to_update],
     ):
-        updated_documents = handle_delete_derived_entities(message, Mock(), "test_index")
+        updated_documents = handle_delete_derived_entities(message, Mock(), "test_index", {})
 
         assert len(updated_documents) == 1
 
-        updated_document = updated_documents[0]
+        updated_document = updated_documents["2345"]
         assert updated_document.guid == "2345"
         assert updated_document.deriveddataentityguid == ["3456"]
         assert updated_document.deriveddataentity == ["Other Data Entity Name"]
@@ -81,4 +81,4 @@ def test__handle_update_derived_entities_no_old_value() -> None:
     )
 
     with pytest.raises(EntityDataNotProvidedError):
-        handle_delete_derived_entities(message, Mock(), "test_index")
+        handle_delete_derived_entities(message, Mock(), "test_index", {})

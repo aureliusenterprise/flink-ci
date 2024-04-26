@@ -13,13 +13,13 @@ from m4i_atlas_core import (
     Entity,
     EntityAuditAction,
     ExistingEntityTypeException,
+    UnknownEntityTypeException,
     data_dictionary_entity_types,
     get_entity_by_guid,
     register_atlas_entity_types,
-    UnknownEntityTypeException
 )
 from marshmallow import ValidationError
-from pyflink.datastream import DataStream, OutputTag
+from pyflink.datastream import DataStream
 from pyflink.datastream.functions import MapFunction, RuntimeContext
 
 from flink_tasks.utils import ExponentialBackoff, retry
@@ -90,7 +90,7 @@ class GetEntityFunction(MapFunction):
         """Close the event loop."""
         self.loop.close()
 
-    def map(self, value: str) -> AtlasChangeMessage | Exception:
+    def map(self, value: str) -> AtlasChangeMessage | Exception:  # noqa: PLR0911
         """
         Process the incoming message and enrich it with entity details.
 
@@ -133,7 +133,7 @@ class GetEntityFunction(MapFunction):
         if change_message.message.operation_type not in [
             EntityAuditAction.ENTITY_CREATE,
             EntityAuditAction.ENTITY_UPDATE,
-            EntityAuditAction.ENTITY_DELETE
+            EntityAuditAction.ENTITY_DELETE,
         ]:
             logging.debug("Ignoring message type: %s", change_message.message.operation_type)
             return ValueError("Ignoring message type")
@@ -143,12 +143,9 @@ class GetEntityFunction(MapFunction):
 
         try:
             entity_details = self.get_entity(entity.guid, entity.type_name)
-        except HTTPError as e:
+        except (HTTPError, KeycloakError) as e:
             logging.exception("HTTP error during entity lookup")
             return RuntimeError(f"HTTP error during entity lookup: {e}")
-        except KeycloakError as e:
-            logging.exception("Auth error during entity lookup")
-            return e
         except UnknownEntityTypeException as e:
             logging.exception("Unknown type for entity: %s", change_message)
             return e
@@ -161,7 +158,7 @@ class GetEntityFunction(MapFunction):
         logging.debug(
             "Successfully enriched change message. GUID = %s, TYPE = %s",
             entity_details.guid,
-            entity_details.type_name
+            entity_details.type_name,
         )
 
         return change_message

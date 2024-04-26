@@ -1,5 +1,5 @@
 import logging
-import time
+
 from m4i_atlas_core import AtlasChangeMessage
 from pyflink.datastream import DataStream, OutputTag
 from pyflink.datastream.functions import MapFunction
@@ -39,7 +39,9 @@ class PrepareNotificationToIndexFunction(MapFunction):
         msg_creation_time = value.msg_creation_time
         event_time = value.message.event_time
         entity = value.message.entity
-        entity.update_time = msg_creation_time
+
+        if entity is not None:
+            entity.update_time = msg_creation_time
 
         if entity is None:
             logging.debug("Entity is required for indexing: %s", value)
@@ -86,5 +88,5 @@ class PrepareNotificationToIndex:
         )
 
         self.main = self.main.flat_map(
-            lambda x: [x] if isinstance(x, EntityVersion) else []
+            lambda x: [x] if isinstance(x, EntityVersion) else [],
         )

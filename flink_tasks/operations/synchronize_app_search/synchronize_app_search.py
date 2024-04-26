@@ -163,5 +163,5 @@ class SynchronizeAppSearch:
         self.main = self.app_search_documents.flat_map(
             lambda documents: (
                 document for document in documents if not isinstance(document, Exception)
-            )
+            ),
         ).name("app_search_documents")

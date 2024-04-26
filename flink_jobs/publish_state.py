@@ -14,9 +14,8 @@ from pyflink.datastream.connectors.kafka import (
 )
 
 from flink_tasks import GetEntity
-from keycloak import KeycloakOpenID
-
 from flink_tasks.operations.publish_state.operations import PrepareNotificationToIndex
+from keycloak import KeycloakOpenID
 
 
 class PublishStateConfig(TypedDict):
@@ -116,7 +115,7 @@ def main(config: PublishStateConfig) -> None:
         .build()
     )
 
-    error_sink = (
+    (
         KafkaSink.builder()
         .set_bootstrap_servers(kafka_bootstrap_server)
         .set_record_serializer(
@@ -163,8 +162,6 @@ def main(config: PublishStateConfig) -> None:
     ).sink_to(publish_state_sink).name("Publish State Sink")
 
     #publish_state_notification.errors.map(
-    #    lambda err: json.dumps({"error": type(err).__name__, "message": str(err)}),
-    #    Types.STRING(),
     #).sink_to(
     #    error_sink,
     #).name("Error Sink")
@@ -187,7 +184,7 @@ if __name__ == "__main__":
         "kafka_publish_state_topic_name": os.environ["KAFKA_PUBLISH_STATE_TOPIC_NAME"],
         "kafka_bootstrap_server_hostname": os.environ["KAFKA_BOOTSTRAP_SERVER_HOSTNAME"],
         "kafka_bootstrap_server_port": os.environ["KAFKA_BOOTSTRAP_SERVER_PORT"],
-        "kafka_consumer_group_id": os.environ.get('CONSUMER_PUBLISH_STATE', "publish_state_group"),
+        "kafka_consumer_group_id": os.environ.get("CONSUMER_PUBLISH_STATE", "publish_state_group"),
         "kafka_error_topic_name": os.environ["KAFKA_ERROR_TOPIC_NAME"],
         "kafka_producer_group_id": os.environ["KAFKA_PRODUCER_GROUP_ID"],
         "kafka_source_topic_name": os.environ["KAFKA_SOURCE_TOPIC_NAME"],

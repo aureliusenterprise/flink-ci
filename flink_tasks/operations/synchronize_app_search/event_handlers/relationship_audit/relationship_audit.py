@@ -1,11 +1,10 @@
 import logging
-from collections.abc import Generator
 
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
-from flink_tasks.model.synchronize_app_search_error_with_payload import SynchronizeAppSearchErrorWithPayload
+from flink_tasks.model.synchronize_app_search_error_with_payload import SynchronizeAppSearchWithPayloadError
 from flink_tasks.utils import ExponentialBackoff, RetryError, retry
 
 RELATIONSHIP_MAP = {
@@ -113,9 +112,9 @@ def get_related_documents(
                 "should": [
                     {"match": {"guid": {"query": guid, "operator": "and"}}}
                     for guid in ids
-                ]
-            }
-        }
+                ],
+            },
+        },
     }
 
     logging.info("Searching for related documents with %s", query)
@@ -127,7 +126,7 @@ def get_related_documents(
 
     if len(results) != len(ids):
         message = f"Some related documents were not found in the index. ({results}/{ids})"
-        raise SynchronizeAppSearchErrorWithPayload(message, results)
+        raise SynchronizeAppSearchWithPayloadError(message, results)
 
     return results
 
@@ -165,9 +164,9 @@ def get_child_documents(
                 "should": [
                     {"match": {"breadcrumbguid": {"query": guid, "operator": "and"}}}
                     for guid in ids
-                ]
-            }
-        }
+                ],
+            },
+        },
     }
 
     logging.info("Searching for child documents with breadcrumb: query = %s", query)
@@ -178,7 +177,7 @@ def get_child_documents(
     ]
 
 
-def handle_deleted_relationships(  # noqa: C901
+def handle_deleted_relationships(  # noqa: C901, PLR0915, PLR0912
     message: EntityMessage,
     document: AppSearchDocument,
     elastic: Elasticsearch,
@@ -228,9 +227,9 @@ def handle_deleted_relationships(  # noqa: C901
 
     try:
         related_documents = get_related_documents(deleted_relationships, elastic, index_name)
-    except RetryError as e:
+    except RetryError:
         logging.warning("Error retrieving related documents for entity %s", message.guid)
-    except SynchronizeAppSearchErrorWithPayload as e:
+    except SynchronizeAppSearchWithPayloadError as e:
         related_documents = e.partial_result
         logging.warning("Gave up retrieving all documents")
 
@@ -241,7 +240,7 @@ def handle_deleted_relationships(  # noqa: C901
             related_document = updated_documents[related_document.guid]  # noqa: PLW2901
 
         if related_document.typename not in RELATIONSHIP_MAP or document.typename not in RELATIONSHIP_MAP:
-            logging.warning("Warning: entity type is not mapped currently. (%s, %s)", related_document.guid, related_document.typename)
+            logging.warning("Entity is not mapped. (%s %s)", related_document.guid, related_document.typename)
             continue
 
         field = RELATIONSHIP_MAP[related_document.typename]
@@ -367,7 +366,7 @@ def handle_deleted_relationships(  # noqa: C901
             # Query guarantees that the breadcrumb includes the guid.
             idx = child_document.breadcrumbguid.index(document.guid)
         except ValueError:
-            logging.error("Document is not in child document breadcrumb (%s)", child_document.guid)
+            logging.exception("Document is not in child document breadcrumb (%s)", child_document.guid)
             continue
 
         child_document.breadcrumbguid = child_document.breadcrumbguid[idx + 1 :]
@@ -384,7 +383,7 @@ def handle_deleted_relationships(  # noqa: C901
     return updated_documents
 
 
-def handle_inserted_relationships(  # noqa: C901
+def handle_inserted_relationships(  # noqa: C901, PLR0912, PLR0915
     message: EntityMessage,
     document: AppSearchDocument,
     elastic: Elasticsearch,
@@ -444,7 +443,7 @@ def handle_inserted_relationships(  # noqa: C901
             related_document = updated_documents[related_document.guid]  # noqa: PLW2901
 
         if related_document.typename not in RELATIONSHIP_MAP or document.typename not in RELATIONSHIP_MAP:
-            logging.warning("Warning: entity type is not mapped currently. (%s, %s)", related_document.guid, related_document.typename)
+            logging.warning("Entity is not mapped. (%s %s)", related_document.guid, related_document.typename)
             continue
 
         field = RELATIONSHIP_MAP[related_document.typename]

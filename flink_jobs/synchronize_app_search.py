@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import time
 from pathlib import Path
@@ -16,10 +15,9 @@ from pyflink.datastream.connectors.kafka import (
     KafkaSink,
 )
 
-from flink_tasks import DetermineChange, GetEntity, SynchronizeAppSearch
-from keycloak import KeycloakOpenID
-
+from flink_tasks import AppSearchDocument, DetermineChange, GetEntity, SynchronizeAppSearch
 from flink_tasks.operations.publish_state.operations import GetPreviousEntity
+from keycloak import KeycloakOpenID
 
 
 class SynchronizeAppSearchConfig(TypedDict):
@@ -122,7 +120,7 @@ def main(config: SynchronizeAppSearchConfig) -> None:
         .build()
     )
 
-    error_sink = (
+    (
         KafkaSink.builder()
         .set_bootstrap_servers(kafka_bootstrap_server)
         .set_record_serializer(
@@ -174,7 +172,7 @@ def main(config: SynchronizeAppSearchConfig) -> None:
         config["elasticsearch_app_search_index_name"],
     )
 
-    def waiting_mapper(value):
+    def waiting_mapper(value: tuple[str, AppSearchDocument | None]) -> tuple[str, AppSearchDocument | None]:
         # To avoid racing condition, introduce a second sleep
         time.sleep(1)
         return value

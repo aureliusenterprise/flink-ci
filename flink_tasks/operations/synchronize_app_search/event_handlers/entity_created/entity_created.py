@@ -1,15 +1,18 @@
 import logging
+from typing import TYPE_CHECKING
 
 from elasticsearch import Elasticsearch
-from m4i_atlas_core import Entity
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
-from flink_tasks.model.synchronize_app_search_error_with_payload import SynchronizeAppSearchErrorWithPayload
+from flink_tasks.model.synchronize_app_search_error_with_payload import SynchronizeAppSearchWithPayloadError
 from flink_tasks.operations.synchronize_app_search.event_handlers.relationship_audit.relationship_audit import (
     get_child_documents,
     get_related_documents,
 )
 from flink_tasks.utils import RetryError
+
+if TYPE_CHECKING:
+    from m4i_atlas_core import Entity
 
 RELATIONSHIP_MAP = {
     "m4i_data_domain": "deriveddatadomain",
@@ -41,7 +44,7 @@ class EntityDataNotProvidedError(SynchronizeAppSearchError):
         super().__init__(f"Entity data not provided for entity {guid}")
 
 
-def default_create_handler(
+def default_create_handler(  # noqa: C901, PLR0915, PLR0912
     message: EntityMessage,
     elastic: Elasticsearch,
     index_name: str,
@@ -74,6 +77,7 @@ def default_create_handler(
     name = getattr(entity_details.attributes, "name", qualified_name)
 
     document = AppSearchDocument(
+        id=message.new_value.guid,
         guid=message.new_value.guid,
         name=name,
         referenceablequalifiedname=qualified_name,
@@ -99,7 +103,7 @@ def default_create_handler(
         for rel in rels
         if (
             rel.guid is not None
-            and getattr(rel, 'type_name', None) not in RELATIONSHIP_BLACKLIST
+            and getattr(rel, "type_name", None) not in RELATIONSHIP_BLACKLIST
         )
     ]
 
@@ -109,9 +113,9 @@ def default_create_handler(
 
     try:
         related_documents = get_related_documents(inserted_relationships, elastic, index_name)
-    except RetryError as e:
+    except RetryError:
         logging.warning("Error retrieving related documents for entity %s.", message.guid)
-    except SynchronizeAppSearchErrorWithPayload as e:
+    except SynchronizeAppSearchWithPayloadError as e:
         related_documents = e.partial_result
         logging.warning("Gave up retrieving all documents")
 
@@ -122,7 +126,7 @@ def default_create_handler(
             related_document = updated_documents[related_document.guid]  # noqa: PLW2901
 
         if related_document.typename not in RELATIONSHIP_MAP or document.typename not in RELATIONSHIP_MAP:
-            logging.warning("Warning: entity type is not mapped currently. (%s, %s)", related_document.guid, related_document.typename)
+            logging.warning("Entity is not mapped. (%s %s)", related_document.guid, related_document.typename)
             continue
 
         field = RELATIONSHIP_MAP[related_document.typename]  # 49112
@@ -171,7 +175,7 @@ def default_create_handler(
     first_parent = next(iter(parents)) if parents else None
 
     if first_parent in inserted_relationships and first_parent in updated_documents:
-        parent_doc = updated_documents[first_parent]  # type: ignore
+        parent_doc = updated_documents[first_parent]
 
         if parent_doc.guid not in document.breadcrumbguid:
             document.breadcrumbname = [

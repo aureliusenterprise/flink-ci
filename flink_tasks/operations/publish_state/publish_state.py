@@ -3,7 +3,6 @@ from pyflink.datastream import DataStream
 from .operations import (
     ElasticsearchFactory,
     GetPreviousEntity,
-    PrepareNotificationToIndex,
 )
 
 
