@@ -22,7 +22,7 @@ class DetermineChangeFunction(MapFunction):
 
     def map(
         self,
-        value: AtlasChangeMessageWithPreviousVersion | tuple[OutputTag, any],
+        value: AtlasChangeMessageWithPreviousVersion | Exception,
     ) -> list[EntityMessage] | list[Exception]:
         """
         Process the incoming message to determine changes using predefined event handlers.
@@ -39,10 +39,10 @@ class DetermineChangeFunction(MapFunction):
             containing `OutputTag` and `Exception` if an error occurs during processing.
         """
 
-        logging.info("DetermineChangeFunction: %s", value)
+        logging.debug("DetermineChangeFunction: %s", value)
 
-        if isinstance(value, tuple):
-            return [value[1]]
+        if isinstance(value, Exception):
+            return [value]
 
         operation_type = value.message.operation_type
 
@@ -61,7 +61,7 @@ class DetermineChangeFunction(MapFunction):
             logging.exception("Error determining change")
             return [e]
 
-        logging.info("Identified changes: %s", messages)
+        logging.debug("Identified changes: %s", messages)
 
         return messages
 
