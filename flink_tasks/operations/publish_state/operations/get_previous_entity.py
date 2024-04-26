@@ -13,11 +13,6 @@ from flink_tasks.utils import ExponentialBackoff, retry
 
 ElasticsearchFactory = Callable[[], Elasticsearch]
 
-ELASTICSEARCH_ERROR = OutputTag("elastic_error")
-NEWER_VERSION_ERROR = OutputTag("newer_version")
-NO_ENTITY_ERROR = OutputTag("no_entity")
-NO_PREVIOUS_ENTITY_ERROR = OutputTag("no_previous_entity")
-
 
 @dataclass
 class ElasticPreviousStateRetrieveError(Exception):
@@ -76,8 +71,8 @@ class GetPreviousEntityFunction(MapFunction):
 
     def map(
         self,
-        value: AtlasChangeMessage | tuple[OutputTag, Exception],
-    ) -> AtlasChangeMessageWithPreviousVersion | tuple[OutputTag, Exception]:
+        value: AtlasChangeMessage | Exception,
+    ) -> AtlasChangeMessageWithPreviousVersion | Exception:
         """
         Map function to retrieve the previous version of an entity.
 
@@ -88,19 +83,19 @@ class GetPreviousEntityFunction(MapFunction):
 
         Returns
         -------
-        AtlasChangeMessageWithPreviousVersion or tuple[OutputTag, Exception]
-            The enriched message with the previous entity version or an error tuple.
+        AtlasChangeMessageWithPreviousVersion or Exception
+            The enriched message with the previous entity version or an error.
         """
-        logging.info(f"AtlasChangeMessage: {value}")
-
-        if isinstance(value, tuple):
+        if isinstance(value, Exception):
             return value
+
+        logging.debug(f"AtlasChangeMessage: {value}")
 
         entity = value.message.entity
 
         if entity is None:
-            logging.error("Entity is required for lookup: %s", value)
-            return NO_ENTITY_ERROR, ValueError("Entity is required for lookup")
+            logging.debug("Entity is required for lookup: %s", value)
+            return ValueError("Entity is required for lookup")
 
         result = AtlasChangeMessageWithPreviousVersion(
             previous_version=None,
@@ -123,9 +118,9 @@ class GetPreviousEntityFunction(MapFunction):
         try:
             result.previous_version = self.get_previous_entity(entity, msg_creation_time)
         except ApiError as e:
-            return ELASTICSEARCH_ERROR, ValueError(str(e))
+            return ValueError(str(e))
         except NoPreviousVersionError as e:
-            return NO_PREVIOUS_ENTITY_ERROR, e
+            return e
         return result
 
     def close(self) -> None:
@@ -144,7 +139,11 @@ class GetPreviousEntityFunction(MapFunction):
                 "filter": [
                     {
                         "match": {
-                            "guid.keyword": current_version.guid,
+                            "guid.keyword": {
+                                "query": current_version.guid,
+                                "operator": "and"
+                            },
+
                         },
                     },
                     {
@@ -170,7 +169,7 @@ class GetPreviousEntityFunction(MapFunction):
         )
 
         if search_result["hits"]["total"]["value"] == 0:
-            logging.error("No previous version found for entity %s at %s.", current_version.guid, timestamp)
+            logging.error("No previous version found for entity %s at %s. (%s)", current_version.guid, timestamp, int(1000*time.time()))
             raise NoPreviousVersionError(current_version.guid, timestamp)
 
         entity_type = get_entity_type_by_type_name(current_version.type_name)
@@ -193,12 +192,8 @@ class GetPreviousEntity:
         The input stream of validated messages.
     main : DataStream
         The main output stream containing messages with previous entities.
-    elastic_errors : DataStream
-        The side output stream for messages that encountered Elasticsearch errors.
-    no_previous_entity_errors : DataStream
-        The side output stream for messages without previous entities.
-    errors : DataStream
-        The union of elastic_errors and no_previous_entity_errors.
+    elastic_factory : ElasticsearchFactory
+        Elasticsearch low-level client.
     """
 
     def __init__(
