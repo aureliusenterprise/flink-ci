@@ -25,12 +25,6 @@ from pyflink.datastream.functions import MapFunction, RuntimeContext
 from flink_tasks.utils import ExponentialBackoff, retry
 from keycloak import KeycloakError, KeycloakOpenID
 
-# Define output tags for errors that can occur during processing.
-ENTITY_LOOKUP_ERROR_TAG = OutputTag("entity_lookup_error")
-NO_ENTITY_ERROR_TAG = OutputTag("no_entity")
-SCHEMA_ERROR_TAG = OutputTag("schema_error")
-UNKNOWN_TYPE = OutputTag("unknown_entity_type")
-
 # A type alias for a factory function that produces instances of KeycloakOpenID.
 KeycloakFactory = Callable[[], KeycloakOpenID]
 
@@ -96,7 +90,7 @@ class GetEntityFunction(MapFunction):
         """Close the event loop."""
         self.loop.close()
 
-    def map(self, value: str) -> AtlasChangeMessage | tuple[OutputTag, Exception]:
+    def map(self, value: str) -> AtlasChangeMessage | Exception:
         """
         Process the incoming message and enrich it with entity details.
 
@@ -109,7 +103,7 @@ class GetEntityFunction(MapFunction):
         -------
         AtlasChangeMessage
             If the message is successfully enriched.
-        tuple[OutputTag, Exception]
+        Exception
             If there's an error during processing.
         """
         try:
@@ -121,28 +115,28 @@ class GetEntityFunction(MapFunction):
             )
         except ValidationError as e:
             logging.exception("Error deserializing message")
-            return SCHEMA_ERROR_TAG, e
+            return e
 
         logging.debug("Successfully deserialized message: %s", change_message)
 
         entity = change_message.message.entity
 
         if entity is None:
-            logging.warning("No entity found in message: %s", change_message)
-            return NO_ENTITY_ERROR_TAG, ValueError(f"No entity found in message. Value={value}")
+            logging.debug("No entity found in message: %s", change_message)
+            return ValueError(f"No entity found in message. Value={value}")
 
         # Skipping types: m4i_source
         if entity.type_name == "m4i_source":
-            logging.warning("Ignoring type: m4i_source, at %s", entity.guid)
-            return UNKNOWN_TYPE, ValueError("Ignoring type: m4i_source")
+            logging.debug("Ignoring type: m4i_source, at %s", entity.guid)
+            return ValueError("Ignoring type: m4i_source")
 
         if change_message.message.operation_type not in [
             EntityAuditAction.ENTITY_CREATE,
             EntityAuditAction.ENTITY_UPDATE,
             EntityAuditAction.ENTITY_DELETE
         ]:
-            logging.warning("Ignoring message type: %s", change_message.message.operation_type)
-            return UNKNOWN_TYPE, ValueError("Ignoring message type")
+            logging.debug("Ignoring message type: %s", change_message.message.operation_type)
+            return ValueError("Ignoring message type")
 
         if change_message.message.operation_type == EntityAuditAction.ENTITY_DELETE:
             return change_message
@@ -151,20 +145,20 @@ class GetEntityFunction(MapFunction):
             entity_details = self.get_entity(entity.guid, entity.type_name)
         except HTTPError as e:
             logging.exception("HTTP error during entity lookup")
-            return ENTITY_LOOKUP_ERROR_TAG, RuntimeError(f"HTTP error during entity lookup: {e}")
+            return RuntimeError(f"HTTP error during entity lookup: {e}")
         except KeycloakError as e:
             logging.exception("Auth error during entity lookup")
-            return ENTITY_LOOKUP_ERROR_TAG, e
+            return e
         except UnknownEntityTypeException as e:
             logging.exception("Unknown type for entity: %s", change_message)
-            return UNKNOWN_TYPE, e
+            return e
         except ClientResponseError as e:
             logging.exception("Can not find entity in atlas: %s", change_message)
-            return ENTITY_LOOKUP_ERROR_TAG, RuntimeError(f"HTTP error during entity lookup: {e}")
+            return RuntimeError(f"HTTP error during entity lookup: {e}")
 
         change_message.message.entity = entity_details
 
-        logging.info(
+        logging.debug(
             "Successfully enriched change message. GUID = %s, TYPE = %s",
             entity_details.guid,
             entity_details.type_name
@@ -241,12 +235,6 @@ class GetEntity:
         The main data stream to be processed.
     main : DataStream
         The main data stream after processing with GetEntityFunction.
-    entity_lookup_errors : DataStream
-        Data stream for entity lookup errors.
-    no_entity_errors : DataStream
-        Data stream for messages with no entity.
-    errors : DataStream
-        Combined data stream of all errors.
     """
 
     def __init__(
