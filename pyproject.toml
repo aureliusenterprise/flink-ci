@@ -7,7 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "~3.10"
-m4i-atlas-core = { git = "https://github.com/aureliusenterprise/m4i_atlas_core.git", rev = "9b2020c9af76551a971709f49e3253f0318f0927" }
+m4i-atlas-core = { git = "https://github.com/aureliusenterprise/m4i_atlas_core.git", rev = "54d9e0471cdd58a9aad971d36ae8ecd4a34c8690" }
 apache-flink = "^1.17"
 dataclasses-json = "^0.6"
 kafka-python = "^2.0"
