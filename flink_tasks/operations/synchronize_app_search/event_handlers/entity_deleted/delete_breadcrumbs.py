@@ -79,9 +79,9 @@ def update_document_breadcrumb(
         A generator of AppSearchDocument instances with modified breadcrumbs.
     """
     # Find all documents that reference the entity in their breadcrumb
-    query = {"query": {"match": {"breadcrumbguid": guid}}}
+    query = {"query": {"match": {"breadcrumbguid": {"query": guid, "operator": "and"}}}}
 
-    logging.debug("Searching for documents with breadcrumb containing entity %s", guid)
+    logging.info("Searching for documents with breadcrumb containing entity %s", guid)
 
     for document in get_documents(query, elastic, index_name):
         if document.guid in updated_documents:
