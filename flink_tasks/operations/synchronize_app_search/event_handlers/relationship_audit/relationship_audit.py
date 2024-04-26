@@ -80,7 +80,7 @@ def get_current_document(guid: str, elastic: Elasticsearch, index_name: str) -> 
     return AppSearchDocument.from_dict(result.body["_source"])
 
 
-@retry(retry_strategy=ExponentialBackoff(), max_retries=3)
+@retry(retry_strategy=ExponentialBackoff(), max_retries=2)
 def get_related_documents(
     ids: list[str],
     elastic: Elasticsearch,
@@ -103,12 +103,19 @@ def get_related_documents(
     list[AppSearchDocument]
         A list of the related AppSearchDocument instances as they are retrieved from Elasticsearch.
     """
+    if not ids:
+        return []
+
+    # Make an exact match on several guid with or clause
     query = {
         "query": {
-            "match": {
-                "guid": " ".join(ids),
-            },
-        },
+            "bool": {
+                "should": [
+                    {"match": {"guid": {"query": guid, "operator": "and"}}}
+                    for guid in ids
+                ]
+            }
+        }
     }
 
     logging.info("Searching for related documents with %s", query)
@@ -120,7 +127,6 @@ def get_related_documents(
 
     if len(results) != len(ids):
         message = f"Some related documents were not found in the index. ({results}/{ids})"
-        logging.warning(message)
         raise SynchronizeAppSearchErrorWithPayload(message, results)
 
     return results
@@ -131,7 +137,7 @@ def get_child_documents(
     ids: list[str],
     elastic: Elasticsearch,
     index_name: str,
-) -> Generator[AppSearchDocument, None, None]:
+) -> list[AppSearchDocument]:
     """
     Get the related documents from the Elasticsearch index.
 
@@ -146,21 +152,30 @@ def get_child_documents(
 
     Returns
     -------
-    Generator[AppSearchDocument, None, None]
+    list[AppSearchDocument]
         Yields the related AppSearchDocument instances as they are retrieved from Elasticsearch.
     """
+    if not ids:
+        return []
+
+    # Make an exact match on several breadcrumbguid with or clause
     query = {
         "query": {
-            "match": {
-                "breadcrumbguid": " ".join(ids),
-            },
-        },
+            "bool": {
+                "should": [
+                    {"match": {"breadcrumbguid": {"query": guid, "operator": "and"}}}
+                    for guid in ids
+                ]
+            }
+        }
     }
 
-    logging.debug("Searching for child documents with breadcrumb containing ids %s", ids)
+    logging.info("Searching for child documents with breadcrumb: query = %s", query)
 
-    for search_result in scan(elastic, index=index_name, query=query):
-        yield AppSearchDocument.from_dict(search_result["_source"])
+    return [
+        AppSearchDocument.from_dict(search_result["_source"])
+        for search_result in scan(elastic, index=index_name, query=query)
+    ]
 
 
 def handle_deleted_relationships(  # noqa: C901
@@ -217,11 +232,17 @@ def handle_deleted_relationships(  # noqa: C901
         logging.warning("Error retrieving related documents for entity %s", message.guid)
     except SynchronizeAppSearchErrorWithPayload as e:
         related_documents = e.partial_result
-        logging.warning("Gave up retrieving all documents %s.", e)
+        logging.warning("Gave up retrieving all documents")
+
+    logging.info("Found related documents: %s", related_documents)
 
     for related_document in related_documents:
         if related_document.guid in updated_documents:
             related_document = updated_documents[related_document.guid]  # noqa: PLW2901
+
+        if related_document.typename not in RELATIONSHIP_MAP or document.typename not in RELATIONSHIP_MAP:
+            logging.warning("Warning: entity type is not mapped currently. (%s, %s)", related_document.guid, related_document.typename)
+            continue
 
         field = RELATIONSHIP_MAP[related_document.typename]
         related_field = RELATIONSHIP_MAP[document.typename]
@@ -422,6 +443,10 @@ def handle_inserted_relationships(  # noqa: C901
         if related_document.guid in updated_documents:
             related_document = updated_documents[related_document.guid]  # noqa: PLW2901
 
+        if related_document.typename not in RELATIONSHIP_MAP or document.typename not in RELATIONSHIP_MAP:
+            logging.warning("Warning: entity type is not mapped currently. (%s, %s)", related_document.guid, related_document.typename)
+            continue
+
         field = RELATIONSHIP_MAP[related_document.typename]
         related_field = RELATIONSHIP_MAP[document.typename]
 
@@ -459,7 +484,7 @@ def handle_inserted_relationships(  # noqa: C901
         if child.guid is not None and child.guid in inserted_relationships
     }
 
-    logging.info("Breadcrumb references: %s", breadcrumb_refs)
+    logging.info("Breadcrumb references: %s. (%s)", breadcrumb_refs, inserted_relationships)
 
     # Add self to the breadcrumb refs in case of child -> parent relationship
     parents = {ref.guid for ref in message.new_value.get_parents() if ref.guid is not None}
@@ -500,11 +525,16 @@ def handle_inserted_relationships(  # noqa: C901
         if child.guid is not None and child.guid in inserted_relationships
     }
 
-    logging.info("Immediate children %s", immediate_children)
+    logging.info("Immediate children %s. (%s)", immediate_children, inserted_relationships)
 
     # update immediate children
     for guid in list(immediate_children):
         # update children breadcrumb
+
+        if guid not in updated_documents:
+            logging.error("Immediate children not found in updated_documents %s", guid)
+            continue
+
         child_doc = updated_documents[guid]
 
         if document.guid in child_doc.breadcrumbguid:
