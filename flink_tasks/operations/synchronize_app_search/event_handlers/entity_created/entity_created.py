@@ -23,6 +23,8 @@ RELATIONSHIP_MAP = {
     "m4i_generic_process": "derivedprocess",
 }
 
+RELATIONSHIP_BLACKLIST = ["m4i_data_quality", "m4i_gov_data_quality", "m4i_source"]
+
 
 class EntityDataNotProvidedError(SynchronizeAppSearchError):
     """Exception raised when the entity details are not provided in the message."""
@@ -95,7 +97,10 @@ def default_create_handler(
         rel.guid
         for rels in inserted
         for rel in rels
-        if rel.guid is not None and rel.guid not in parents
+        if (
+            rel.guid is not None
+            and getattr(rel, 'type_name', None) not in RELATIONSHIP_BLACKLIST
+        )
     ]
 
     logging.info("Relationships to insert: %s", inserted_relationships)
@@ -108,7 +113,7 @@ def default_create_handler(
         logging.warning("Error retrieving related documents for entity %s.", message.guid)
     except SynchronizeAppSearchErrorWithPayload as e:
         related_documents = e.partial_result
-        logging.warning("Gave up retrieving all documents %s.", e)
+        logging.warning("Gave up retrieving all documents")
 
     logging.info("Found related documents: %s", related_documents)
 
@@ -116,7 +121,11 @@ def default_create_handler(
         if related_document.guid in updated_documents:
             related_document = updated_documents[related_document.guid]  # noqa: PLW2901
 
-        field = RELATIONSHIP_MAP[related_document.typename]
+        if related_document.typename not in RELATIONSHIP_MAP or document.typename not in RELATIONSHIP_MAP:
+            logging.warning("Warning: entity type is not mapped currently. (%s, %s)", related_document.guid, related_document.typename)
+            continue
+
+        field = RELATIONSHIP_MAP[related_document.typename]  # 49112
         related_field = RELATIONSHIP_MAP[document.typename]
 
         guids: list[str] = getattr(document, f"{field}guid")
@@ -153,7 +162,7 @@ def default_create_handler(
         if child.guid is not None and child.guid in inserted_relationships
     }
 
-    logging.info("Breadcrumb references: %s", breadcrumb_refs)
+    logging.info("Breadcrumb references %s. (%s)", breadcrumb_refs, inserted_relationships)
 
     # Add self to the breadcrumb refs in case of child -> parent relationship
     parents = {ref.guid for ref in message.new_value.get_parents() if ref.guid is not None}
@@ -161,8 +170,8 @@ def default_create_handler(
     # Inserted relationship was a parent relation
     first_parent = next(iter(parents)) if parents else None
 
-    if first_parent in inserted_relationships:
-        parent_doc = updated_documents[first_parent] # type: ignore
+    if first_parent in inserted_relationships and first_parent in updated_documents:
+        parent_doc = updated_documents[first_parent]  # type: ignore
 
         if parent_doc.guid not in document.breadcrumbguid:
             document.breadcrumbname = [
@@ -194,11 +203,15 @@ def default_create_handler(
         if child.guid is not None and child.guid in inserted_relationships
     }
 
-    logging.info("Immediate children %s", immediate_children)
+    logging.info("Immediate children %s. (%s)", immediate_children, inserted_relationships)
 
     # update immediate children
     for guid in list(immediate_children):
         # update children breadcrumb
+        if guid not in updated_documents:
+            logging.warning("Child is not in updated_documents. GUID = %s", guid)
+            continue
+
         child_doc = updated_documents[guid]
 
         if document.guid in child_doc.breadcrumbguid:
@@ -284,12 +297,14 @@ def create_person_handler(
 
     Parameters
     ----------
-    entity_details : Entity
-        The person entity details to extract the necessary attributes from.
+    message : EntityMessage
+        Message containing the person entity details to extract the necessary attributes from.
     elastic : Elasticsearch
         The Elasticsearch client for database interaction.
     index_name : str
         The name of the index in Elasticsearch to query.
+    updated_documents : dict[str, AppSearchDocument]
+        A dictionary containing the updated documents
 
     Returns
     -------
@@ -335,6 +350,8 @@ def handle_entity_created(
         The Elasticsearch client for database interaction.
     index_name : str
         The name of the index in Elasticsearch to query.
+    updated_documents : dict[str, AppSearchDocument]
+        A dictionary containing the updated documents.
 
     Returns
     -------
