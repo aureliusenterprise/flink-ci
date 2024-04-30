@@ -129,7 +129,7 @@ def default_create_handler(  # noqa: C901, PLR0915, PLR0912
             logging.warning("Entity is not mapped. (%s %s)", related_document.guid, related_document.typename)
             continue
 
-        field = RELATIONSHIP_MAP[related_document.typename]  # 49112
+        field = RELATIONSHIP_MAP[related_document.typename]
         related_field = RELATIONSHIP_MAP[document.typename]
 
         guids: list[str] = getattr(document, f"{field}guid")
