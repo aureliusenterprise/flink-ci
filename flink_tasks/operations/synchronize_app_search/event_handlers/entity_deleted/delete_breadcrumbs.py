@@ -81,7 +81,7 @@ def update_document_breadcrumb(
     # Find all documents that reference the entity in their breadcrumb
     query = {"query": {"match": {"breadcrumbguid": {"query": guid, "operator": "and"}}}}
 
-    logging.info("Searching for documents with breadcrumb containing entity %s", guid)
+    logging.debug("Searching for documents with breadcrumb containing entity %s", guid)
 
     for document in get_documents(query, elastic, index_name):
         if document.guid in updated_documents:

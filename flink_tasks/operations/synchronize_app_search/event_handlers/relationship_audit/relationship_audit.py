@@ -117,7 +117,7 @@ def get_related_documents(
         },
     }
 
-    logging.info("Searching for related documents with %s", query)
+    logging.debug("Searching for related documents with %s", query)
 
     results = [
         AppSearchDocument.from_dict(search_result["_source"])
@@ -169,7 +169,7 @@ def get_child_documents(
         },
     }
 
-    logging.info("Searching for child documents with breadcrumb: query = %s", query)
+    logging.debug("Searching for child documents with breadcrumb: query = %s", query)
 
     return [
         AppSearchDocument.from_dict(search_result["_source"])

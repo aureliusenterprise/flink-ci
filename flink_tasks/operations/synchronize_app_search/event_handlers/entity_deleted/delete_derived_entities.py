@@ -96,7 +96,7 @@ def handle_derived_entities_delete(  # noqa: PLR0913
         },
     }
 
-    logging.info(
+    logging.debug(
         "Searching for documents with relationship %s containing entity %s",
         relationship_attribute_guid,
         entity_guid,
