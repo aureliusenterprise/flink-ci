@@ -1,7 +1,7 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from m4i_atlas_core import Attributes, Entity, EntityAuditAction
+from m4i_atlas_core import Attributes, BusinessDataDomain, BusinessDataDomainAttributes, Entity, EntityAuditAction
 
 from flink_tasks import AppSearchDocument, EntityMessage, EntityMessageType
 
@@ -34,10 +34,13 @@ def test__handle_update_derived_entities_update_document() -> None:
         guid="1234",
         original_event_type=EntityAuditAction.ENTITY_CREATE,
         event_type=EntityMessageType.ENTITY_CREATED,
-        new_value=Entity(
+        new_value=BusinessDataDomain(
             guid="1234",
             type_name="m4i_data_domain",
-            attributes=Attributes.from_dict({"name": "New Data Domain Name"}),
+            attributes=BusinessDataDomainAttributes.from_dict({
+                "name": "New Data Domain Name",
+                "qualified_name": "1111",
+            }),
         ),
         changed_attributes=["name"],
     )
@@ -55,11 +58,11 @@ def test__handle_update_derived_entities_update_document() -> None:
         __package__ + ".update_breadcrumbs.get_documents",
         return_value=[document_to_update],
     ):
-        updated_documents = handle_update_breadcrumbs(message, Mock(), "test_index")
+        updated_documents = handle_update_breadcrumbs(message, Mock(), "test_index", {})
 
         assert len(updated_documents) == 1
 
-        updated_document = updated_documents[0]
+        updated_document = updated_documents["2345"]
         assert updated_document.guid == "2345"
         assert updated_document.typename == "m4i_data_entity"
         assert updated_document.name == "Entity Name"
@@ -88,10 +91,13 @@ def test__handle_update_derived_entities_no_derived_entities() -> None:
         guid="1234",
         original_event_type=EntityAuditAction.ENTITY_CREATE,
         event_type=EntityMessageType.ENTITY_CREATED,
-        new_value=Entity(
+        new_value=BusinessDataDomain(
             guid="1234",
             type_name="m4i_data_domain",
-            attributes=Attributes.from_dict({"name": "New Data Domain Name"}),
+            attributes=BusinessDataDomainAttributes.from_dict({
+                "name": "Data Domain Name",
+                "qualified_name": "1111",
+            }),
         ),
         changed_attributes=["name"],
     )
@@ -100,7 +106,7 @@ def test__handle_update_derived_entities_no_derived_entities() -> None:
         __package__ + ".update_breadcrumbs.get_documents",
         return_value=[],
     ):
-        updated_documents = handle_update_breadcrumbs(message, Mock(), "test_index")
+        updated_documents = handle_update_breadcrumbs(message, Mock(), "test_index", {})
 
         assert len(updated_documents) == 0
 
@@ -130,7 +136,7 @@ def test__handle_update_derived_entities_no_name_update() -> None:
     )
 
     with pytest.raises(EntityNameNotFoundError):
-        handle_update_breadcrumbs(message, Mock(), "test_index")
+        handle_update_breadcrumbs(message, Mock(), "test_index", {})
 
 
 def test__handle_update_derived_entities_no_new_value() -> None:
@@ -153,7 +159,7 @@ def test__handle_update_derived_entities_no_new_value() -> None:
     )
 
     with pytest.raises(EntityDataNotProvidedError):
-        handle_update_breadcrumbs(message, Mock(), "test_index")
+        handle_update_breadcrumbs(message, Mock(), "test_index", {})
 
 
 def test__handle_update_breadcrumbs_malformed_breadcrumb() -> None:
@@ -176,10 +182,13 @@ def test__handle_update_breadcrumbs_malformed_breadcrumb() -> None:
         guid="1234",
         original_event_type=EntityAuditAction.ENTITY_UPDATE,
         event_type=EntityMessageType.ENTITY_CREATED,
-        new_value=Entity(
+        new_value=BusinessDataDomain(
             guid="1234",
             type_name="m4i_data_domain",
-            attributes=Attributes.from_dict({"name": "New Data Domain Name"}),
+            attributes=BusinessDataDomainAttributes.from_dict({
+                "name": "Data Domain Name",
+                "qualified_name": "1111",
+            }),
         ),
         changed_attributes=["name"],
     )
@@ -199,7 +208,7 @@ def test__handle_update_breadcrumbs_malformed_breadcrumb() -> None:
     ), patch(
         __package__ + ".update_breadcrumbs.logging.error",
     ) as mock_logger:
-        updated_documents = handle_update_breadcrumbs(message, Mock(), "test_index")
+        updated_documents = handle_update_breadcrumbs(message, Mock(), "test_index", {})
 
         assert len(updated_documents) == 0
 
@@ -229,10 +238,13 @@ def test__handle_update_breadcrumbs_guid_not_present() -> None:
         guid="1234",
         original_event_type=EntityAuditAction.ENTITY_UPDATE,
         event_type=EntityMessageType.ENTITY_CREATED,
-        new_value=Entity(
+        new_value=BusinessDataDomain(
             guid="1234",
             type_name="m4i_data_domain",
-            attributes=Attributes.from_dict({"name": "New Data Domain Name"}),
+            attributes=BusinessDataDomainAttributes.from_dict({
+                "name": "Data Domain Name",
+                "qualified_name": "1111",
+            }),
         ),
         changed_attributes=["name"],
     )
@@ -250,7 +262,7 @@ def test__handle_update_breadcrumbs_guid_not_present() -> None:
         __package__ + ".update_breadcrumbs.get_documents",
         return_value=[document_to_update],
     ):
-        updated_documents = handle_update_breadcrumbs(message, Mock(), "test_index")
+        updated_documents = handle_update_breadcrumbs(message, Mock(), "test_index", {})
 
         assert len(updated_documents) == 0
 
@@ -275,10 +287,13 @@ def test__handle_update_breadcrumbs_name_already_correct() -> None:
         guid="1234",
         original_event_type=EntityAuditAction.ENTITY_UPDATE,
         event_type=EntityMessageType.ENTITY_CREATED,
-        new_value=Entity(
+        new_value=BusinessDataDomain(
             guid="1234",
             type_name="m4i_data_domain",
-            attributes=Attributes.from_dict({"name": "New Data Domain Name"}),
+            attributes=BusinessDataDomainAttributes.from_dict({
+                "name": "New Data Domain Name",
+                "qualified_name": "1111",
+            }),
         ),
         changed_attributes=["name"],
     )
@@ -296,6 +311,6 @@ def test__handle_update_breadcrumbs_name_already_correct() -> None:
         __package__ + ".update_breadcrumbs.get_documents",
         return_value=[document_to_update],
     ):
-        updated_documents = handle_update_breadcrumbs(message, Mock(), "test_index")
+        updated_documents = handle_update_breadcrumbs(message, Mock(), "test_index", {})
 
         assert len(updated_documents) == 0

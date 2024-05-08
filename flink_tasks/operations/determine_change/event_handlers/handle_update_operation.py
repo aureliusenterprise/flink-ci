@@ -34,13 +34,13 @@ def handle_attribute_changes(
         changes are detected. Returns None if no changes are detected.
     """
     attributes_dict = current.attributes.to_dict()
-    if 'unmappedAttributes' in attributes_dict:
-        del attributes_dict['unmappedAttributes']
+    if "unmappedAttributes" in attributes_dict:
+        del attributes_dict["unmappedAttributes"]
 
     previous_attributes_dict = previous.attributes.to_dict()
 
-    if 'unmappedAttributes' in  previous_attributes_dict:
-        del previous_attributes_dict['unmappedAttributes']
+    if "unmappedAttributes" in  previous_attributes_dict:
+        del previous_attributes_dict["unmappedAttributes"]
 
     inserted_attributes = [key for key in attributes_dict if key not in previous_attributes_dict]
 

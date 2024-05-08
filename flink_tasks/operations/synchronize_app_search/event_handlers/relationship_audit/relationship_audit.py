@@ -1,10 +1,10 @@
 import logging
-from collections.abc import Generator
 
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
+from flink_tasks.model.synchronize_app_search_error_with_payload import SynchronizeAppSearchWithPayloadError
 from flink_tasks.utils import ExponentialBackoff, RetryError, retry
 
 RELATIONSHIP_MAP = {
@@ -79,7 +79,7 @@ def get_current_document(guid: str, elastic: Elasticsearch, index_name: str) -> 
     return AppSearchDocument.from_dict(result.body["_source"])
 
 
-@retry(retry_strategy=ExponentialBackoff())
+@retry(retry_strategy=ExponentialBackoff(), max_retries=2)
 def get_related_documents(
     ids: list[str],
     elastic: Elasticsearch,
@@ -102,15 +102,22 @@ def get_related_documents(
     list[AppSearchDocument]
         A list of the related AppSearchDocument instances as they are retrieved from Elasticsearch.
     """
+    if not ids:
+        return []
+
+    # Make an exact match on several guid with or clause
     query = {
         "query": {
-            "match": {
-                "guid": " ".join(ids),
+            "bool": {
+                "should": [
+                    {"match": {"guid": {"query": guid, "operator": "and"}}}
+                    for guid in ids
+                ],
             },
         },
     }
 
-    logging.debug("Searching for related documents with ids %s", ids)
+    logging.debug("Searching for related documents with %s", query)
 
     results = [
         AppSearchDocument.from_dict(search_result["_source"])
@@ -118,9 +125,8 @@ def get_related_documents(
     ]
 
     if len(results) != len(ids):
-        message = "Some related documents were not found in the index"
-        logging.error(message)
-        raise SynchronizeAppSearchError(message)
+        message = f"Some related documents were not found in the index. ({results}/{ids})"
+        raise SynchronizeAppSearchWithPayloadError(message, results)
 
     return results
 
@@ -130,7 +136,7 @@ def get_child_documents(
     ids: list[str],
     elastic: Elasticsearch,
     index_name: str,
-) -> Generator[AppSearchDocument, None, None]:
+) -> list[AppSearchDocument]:
     """
     Get the related documents from the Elasticsearch index.
 
@@ -145,24 +151,33 @@ def get_child_documents(
 
     Returns
     -------
-    Generator[AppSearchDocument, None, None]
+    list[AppSearchDocument]
         Yields the related AppSearchDocument instances as they are retrieved from Elasticsearch.
     """
+    if not ids:
+        return []
+
+    # Make an exact match on several breadcrumbguid with or clause
     query = {
         "query": {
-            "match": {
-                "breadcrumbguid": " ".join(ids),
+            "bool": {
+                "should": [
+                    {"match": {"breadcrumbguid": {"query": guid, "operator": "and"}}}
+                    for guid in ids
+                ],
             },
         },
     }
 
-    logging.debug("Searching for child documents with breadcrumb containing ids %s", ids)
+    logging.debug("Searching for child documents with breadcrumb: query = %s", query)
 
-    for search_result in scan(elastic, index=index_name, query=query):
-        yield AppSearchDocument.from_dict(search_result["_source"])
+    return [
+        AppSearchDocument.from_dict(search_result["_source"])
+        for search_result in scan(elastic, index=index_name, query=query)
+    ]
 
 
-def handle_deleted_relationships(  # noqa: C901
+def handle_deleted_relationships(  # noqa: C901, PLR0915, PLR0912
     message: EntityMessage,
     document: AppSearchDocument,
     elastic: Elasticsearch,
@@ -208,15 +223,25 @@ def handle_deleted_relationships(  # noqa: C901
         logging.info("No relationships to delete for entity %s", message.guid)
         return updated_documents
 
+    related_documents = []
+
     try:
         related_documents = get_related_documents(deleted_relationships, elastic, index_name)
-    except RetryError as e:
-        logging.exception("Error retrieving related documents for entity %s", message.guid)
-        raise SynchronizeAppSearchError(message) from e
+    except RetryError:
+        logging.warning("Error retrieving related documents for entity %s", message.guid)
+    except SynchronizeAppSearchWithPayloadError as e:
+        related_documents = e.partial_result
+        logging.warning("Gave up retrieving all documents")
+
+    logging.info("Found related documents: %s", related_documents)
 
     for related_document in related_documents:
         if related_document.guid in updated_documents:
             related_document = updated_documents[related_document.guid]  # noqa: PLW2901
+
+        if related_document.typename not in RELATIONSHIP_MAP or document.typename not in RELATIONSHIP_MAP:
+            logging.warning("Entity is not mapped. (%s %s)", related_document.guid, related_document.typename)
+            continue
 
         field = RELATIONSHIP_MAP[related_document.typename]
         related_field = RELATIONSHIP_MAP[document.typename]
@@ -341,7 +366,7 @@ def handle_deleted_relationships(  # noqa: C901
             # Query guarantees that the breadcrumb includes the guid.
             idx = child_document.breadcrumbguid.index(document.guid)
         except ValueError:
-            logging.error("Document is not in child document breadcrumb (%s)", child_document.guid)
+            logging.exception("Document is not in child document breadcrumb (%s)", child_document.guid)
             continue
 
         child_document.breadcrumbguid = child_document.breadcrumbguid[idx + 1 :]
@@ -358,7 +383,7 @@ def handle_deleted_relationships(  # noqa: C901
     return updated_documents
 
 
-def handle_inserted_relationships(  # noqa: C901
+def handle_inserted_relationships(  # noqa: C901, PLR0912, PLR0915
     message: EntityMessage,
     document: AppSearchDocument,
     elastic: Elasticsearch,
@@ -417,6 +442,10 @@ def handle_inserted_relationships(  # noqa: C901
         if related_document.guid in updated_documents:
             related_document = updated_documents[related_document.guid]  # noqa: PLW2901
 
+        if related_document.typename not in RELATIONSHIP_MAP or document.typename not in RELATIONSHIP_MAP:
+            logging.warning("Entity is not mapped. (%s %s)", related_document.guid, related_document.typename)
+            continue
+
         field = RELATIONSHIP_MAP[related_document.typename]
         related_field = RELATIONSHIP_MAP[document.typename]
 
@@ -454,7 +483,7 @@ def handle_inserted_relationships(  # noqa: C901
         if child.guid is not None and child.guid in inserted_relationships
     }
 
-    logging.info("Breadcrumb references: %s", breadcrumb_refs)
+    logging.info("Breadcrumb references: %s. (%s)", breadcrumb_refs, inserted_relationships)
 
     # Add self to the breadcrumb refs in case of child -> parent relationship
     parents = {ref.guid for ref in message.new_value.get_parents() if ref.guid is not None}
@@ -495,11 +524,16 @@ def handle_inserted_relationships(  # noqa: C901
         if child.guid is not None and child.guid in inserted_relationships
     }
 
-    logging.info("Immediate children %s", immediate_children)
+    logging.info("Immediate children %s. (%s)", immediate_children, inserted_relationships)
 
     # update immediate children
     for guid in list(immediate_children):
         # update children breadcrumb
+
+        if guid not in updated_documents:
+            logging.error("Immediate children not found in updated_documents %s", guid)
+            continue
+
         child_doc = updated_documents[guid]
 
         if document.guid in child_doc.breadcrumbguid:

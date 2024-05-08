@@ -1,7 +1,7 @@
 from unittest.mock import Mock
 
 import pytest
-from m4i_atlas_core import Attributes, Entity, EntityAuditAction
+from m4i_atlas_core import Attributes, BusinessDataDomain, BusinessDataDomainAttributes, Entity, EntityAuditAction
 
 from flink_tasks import EntityMessage, EntityMessageType
 
@@ -58,29 +58,31 @@ def test__update_with_valid_attributes(elasticsearch: Mock) -> None:
     - Each whitelisted attribute in the updated document matches the new value provided.
     - Elasticsearch 'get' method is called once with correct parameters.
     """
-    valid_attributes = {"definition": "updated definition", "email": "updated@example.com"}
-
     message = EntityMessage(
         type_name="m4i_data_domain",
         guid="1234",
         original_event_type=EntityAuditAction.ENTITY_CREATE,
         event_type=EntityMessageType.ENTITY_CREATED,
-        new_value=Entity(
+        new_value=BusinessDataDomain(
             guid="1234",
-            type_name="test_entity",
-            attributes=Attributes.from_dict(valid_attributes),
+            type_name="m4i_data_domain",
+            attributes=BusinessDataDomainAttributes.from_dict({
+                "definition": "updated definition",
+                "name": "new domain name",
+                "qualified_name": "1111",
+                }),
         ),
-        inserted_attributes=list(valid_attributes.keys()),
+        inserted_attributes=["definition", "name"],
     )
 
-    updated_docs = handle_update_attributes(message, elasticsearch, "test_index")
+    updated_docs = handle_update_attributes(message, elasticsearch, "test_index", {})
 
     assert len(updated_docs) == 1
 
-    document = updated_docs[0]
+    document = updated_docs["1234"]
 
-    for attr in valid_attributes:
-        assert getattr(document, attr) == valid_attributes[attr]
+    assert document.name == "new domain name"
+    assert document.definition == "updated definition"
 
     elasticsearch.get.assert_called_once_with(index="test_index", id="1234")
 
@@ -115,7 +117,7 @@ def test__update_no_whitelisted_attributes(elasticsearch: Mock) -> None:
         changed_attributes=[],
     )
 
-    updated_docs = handle_update_attributes(message, elasticsearch, "test_index")
+    updated_docs = handle_update_attributes(message, elasticsearch, "test_index", {})
 
     assert len(updated_docs) == 0
 
@@ -145,7 +147,7 @@ def test__entity_message_without_new_value(elasticsearch: Mock) -> None:
     )
 
     with pytest.raises(EntityDataNotProvidedError):
-        handle_update_attributes(message, elasticsearch, "test_index")
+        handle_update_attributes(message, elasticsearch, "test_index", {})
 
 
 def test__entity_not_found_in_elasticsearch(elasticsearch: Mock) -> None:
@@ -180,4 +182,4 @@ def test__entity_not_found_in_elasticsearch(elasticsearch: Mock) -> None:
     )
 
     with pytest.raises(AppSearchDocumentNotFoundError):
-        handle_update_attributes(message, elasticsearch, "test_index")
+        handle_update_attributes(message, elasticsearch, "test_index", {})

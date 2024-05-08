@@ -79,8 +79,8 @@ class SynchronizeAppSearchFunction(MapFunction):
 
     def map(
         self,
-        value: EntityMessage,
-    ) -> list[tuple[str, AppSearchDocument | None]] | tuple[OutputTag, Exception]:
+        value: EntityMessage | Exception,
+    ) -> list[tuple[str, AppSearchDocument | None]] | list[Exception]:
         """
         Process an EntityMessage and perform actions based on the type of change event.
 
@@ -91,18 +91,21 @@ class SynchronizeAppSearchFunction(MapFunction):
 
         Returns
         -------
-        list[tuple[str, AppSearchDocument | None]] | tuple[OutputTag, Exception]
-            A list of tuples containing document GUIDs and documents, or a tuple of an OutputTag and
-            an Exception.
+        list[tuple[str, AppSearchDocument | None]] | list[Exception]
+            A list of tuples containing document GUIDs and documents, or a list of Exceptions.
         """
-        logging.info("Processing message: %s", value)
+        if isinstance(value, Exception):
+            logging.debug("Passing down error: %s", value)
+            return [value]
+
+        logging.info("SynchronizeAppSearchFunction: %s", value)
 
         event_type = value.event_type
 
         if event_type not in EVENT_HANDLERS:
             message = f"Unknown event type: {event_type}"
             logging.error(message)
-            return UNKNOWN_EVENT_TYPE_TAG, NotImplementedError(message)
+            return [NotImplementedError(message)]
 
         event_handlers = EVENT_HANDLERS[event_type]
 
@@ -118,7 +121,7 @@ class SynchronizeAppSearchFunction(MapFunction):
             if event_type == EntityMessageType.ENTITY_DELETED:
                 updated_documents[value.guid] = None  # type: ignore
         except SynchronizeAppSearchError as e:
-            return SYNCHRONIZE_APP_SEARCH_ERROR_TAG, e
+            return [e]
 
         result = list(updated_documents.items())
 
@@ -141,21 +144,15 @@ class SynchronizeAppSearch:
         The data stream that contains change messages.
     app_search_documents : DataStream
         The processed stream of App Search documents as a batch per change.
-    unknown_event_types : DataStream
-        The stream containing messages with unknown event types.
-    synchronize_app_search_errors : DataStream
-        The stream containing synchronization errors.
     main : DataStream
         The stream of individual App Search documents.
-    errors : DataStream
-        The unified stream of errors.
     """
 
     def __init__(
-        self,
-        data_stream: DataStream,
-        elastic_factory: ElasticsearchFactory,
-        index_name: str,
+            self,
+            data_stream: DataStream,
+            elastic_factory: ElasticsearchFactory,
+            index_name: str,
     ) -> None:
         self.data_stream = data_stream
 
@@ -163,16 +160,8 @@ class SynchronizeAppSearch:
             SynchronizeAppSearchFunction(elastic_factory, index_name),
         ).name("synchronize_app_search")
 
-        self.unknown_event_types = self.app_search_documents.get_side_output(
-            UNKNOWN_EVENT_TYPE_TAG,
-        ).name("unknown_event_types")
-
-        self.synchronize_app_search_errors = self.app_search_documents.get_side_output(
-            SYNCHRONIZE_APP_SEARCH_ERROR_TAG,
-        ).name("synchronize_app_search_errors")
-
         self.main = self.app_search_documents.flat_map(
-            lambda documents: (document for document in documents),
+            lambda documents: (
+                document for document in documents if not isinstance(document, Exception)
+            ),
         ).name("app_search_documents")
-
-        self.errors = self.unknown_event_types.union(self.synchronize_app_search_errors)

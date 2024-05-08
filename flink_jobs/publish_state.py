@@ -1,10 +1,8 @@
 import json
 import os
-import time
 from pathlib import Path
 from typing import TypedDict
 
-from elasticsearch import Elasticsearch
 from pyflink.common import Types
 from pyflink.common.serialization import SimpleStringSchema
 from pyflink.datastream import StreamExecutionEnvironment
@@ -15,14 +13,14 @@ from pyflink.datastream.connectors.kafka import (
     KafkaSink,
 )
 
-from flink_tasks import AppSearchDocument, DetermineChange, GetEntity, SynchronizeAppSearch
-from flink_tasks.operations.publish_state.operations import GetPreviousEntity
+from flink_tasks import GetEntity
+from flink_tasks.operations.publish_state.operations import PrepareNotificationToIndex
 from keycloak import KeycloakOpenID
 
 
-class SynchronizeAppSearchConfig(TypedDict):
+class PublishStateConfig(TypedDict):
     """
-    Configuration required to execute the SynchronizeAppSearch job.
+    Configuration required to execute the PublishState job.
 
     Attributes
     ----------
@@ -74,7 +72,7 @@ class SynchronizeAppSearchConfig(TypedDict):
     keycloak_password: str
 
 
-def main(config: SynchronizeAppSearchConfig) -> None:
+def main(config: PublishStateConfig) -> None:
     """Sink an example message into a Kafka topic."""
     env = StreamExecutionEnvironment.get_execution_environment()
 
@@ -99,13 +97,12 @@ def main(config: SynchronizeAppSearchConfig) -> None:
         .set_start_from_latest()
     )
 
-    # Set up the Kafka sink
-    app_search_sink: KafkaSink = (
+    publish_state_sink = (
         KafkaSink.builder()
         .set_bootstrap_servers(kafka_bootstrap_server)
         .set_record_serializer(
             KafkaRecordSerializationSchema.builder()
-            .set_topic(config["kafka_app_search_topic_name"])
+            .set_topic(config["kafka_publish_state_topic_name"])
             .set_key_serialization_schema(
                 SimpleStringSchema(),
             )
@@ -115,8 +112,6 @@ def main(config: SynchronizeAppSearchConfig) -> None:
             .build(),
         )
         .set_delivery_guarantee(DeliveryGuarantee.AT_LEAST_ONCE)
-        .set_property("batch.size", "1")
-        .set_property("linger.ms", "0")
         .build()
     )
 
@@ -132,13 +127,6 @@ def main(config: SynchronizeAppSearchConfig) -> None:
         .set_delivery_guarantee(DeliveryGuarantee.AT_LEAST_ONCE)
         .build()
     )
-
-    def create_elasticsearch_client() -> Elasticsearch:
-        """Create an Elasticsearch client instance."""
-        return Elasticsearch(
-            hosts=[config["elasticsearch_endpoint"]],
-            basic_auth=(config["elasticsearch_username"], config["elasticsearch_password"]),
-        )
 
     def create_keycloak_client() -> KeycloakOpenID:
         """Create a Keycloak client instance."""
@@ -158,43 +146,34 @@ def main(config: SynchronizeAppSearchConfig) -> None:
         (config["keycloak_username"], config["keycloak_password"]),
     )
 
-    previous_entity = GetPreviousEntity(
+    # Initialize the stage for preparing the validated notifications for indexing.
+    publish_state_notification = PrepareNotificationToIndex(
         get_entity.main,
-        create_elasticsearch_client,
-        config["elasticsearch_publish_state_index_name"],
     )
 
-    determine_change = DetermineChange(previous_entity.main)
-
-    synchronize_app_search = SynchronizeAppSearch(
-        determine_change.main,
-        create_elasticsearch_client,
-        config["elasticsearch_app_search_index_name"],
-    )
-
-    def waiting_mapper(value: tuple[str, AppSearchDocument | None]) -> tuple[str, AppSearchDocument | None]:
-        # To avoid racing condition, introduce a second sleep
-        time.sleep(1)
-        return value
-
-    synchronize_app_search.main.map(waiting_mapper).map(
+    publish_state_notification.main.map(
         lambda document: json.dumps(
             {
-                "id": document[0],
-                "value": document[1] if document[1] is None else document[1].to_dict(),
+                "id": document.doc_id,
+                "value": json.loads(document.body.to_json()),
             },
         ),
         Types.STRING(),
-    ).sink_to(app_search_sink).name("App Search Sink")
+    ).sink_to(publish_state_sink).name("Publish State Sink")
 
-    env.execute("Synchronize App Search")
+    #publish_state_notification.errors.map(
+    #).sink_to(
+    #    error_sink,
+    #).name("Error Sink")
+
+    env.execute("Publish state")
 
 
 if __name__ == "__main__":
     """
     Entry point of the script. Load configuration from environment variables and start the job.
     """
-    config: SynchronizeAppSearchConfig = {
+    config: PublishStateConfig = {
         "atlas_server_url": os.environ["ATLAS_SERVER_URL"],
         "elasticsearch_app_search_index_name": os.environ["ELASTICSEARCH_APP_SEARCH_INDEX_NAME"],
         "elasticsearch_publish_state_index_name": os.environ["ELASTICSEARCH_STATE_INDEX_NAME"],
@@ -205,7 +184,7 @@ if __name__ == "__main__":
         "kafka_publish_state_topic_name": os.environ["KAFKA_PUBLISH_STATE_TOPIC_NAME"],
         "kafka_bootstrap_server_hostname": os.environ["KAFKA_BOOTSTRAP_SERVER_HOSTNAME"],
         "kafka_bootstrap_server_port": os.environ["KAFKA_BOOTSTRAP_SERVER_PORT"],
-        "kafka_consumer_group_id": os.environ["KAFKA_CONSUMER_GROUP_ID"],
+        "kafka_consumer_group_id": os.environ.get("CONSUMER_PUBLISH_STATE", "publish_state_group"),
         "kafka_error_topic_name": os.environ["KAFKA_ERROR_TOPIC_NAME"],
         "kafka_producer_group_id": os.environ["KAFKA_PRODUCER_GROUP_ID"],
         "kafka_source_topic_name": os.environ["KAFKA_SOURCE_TOPIC_NAME"],

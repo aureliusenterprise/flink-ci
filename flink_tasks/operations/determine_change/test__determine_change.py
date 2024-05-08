@@ -153,7 +153,7 @@ def test__determine_change_handle_unsupported_operation_type(
         data_stream=data_stream,
     )
 
-    output = list(determine_change.unknown_event_types.execute_and_collect())
+    output = list(determine_change.main.execute_and_collect())
 
     assert len(output) == 1
 
@@ -186,7 +186,7 @@ def test__determine_change_handle_processing_error(
         data_stream=data_stream,
     )
 
-    output = list(determine_change.determine_change_errors.execute_and_collect())
+    output = list(determine_change.main.execute_and_collect())
 
     assert len(output) == 1
 

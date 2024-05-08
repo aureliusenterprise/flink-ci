@@ -9,7 +9,6 @@ from flink_tasks import (
     AppSearchDocument,
     EntityMessage,
     EntityMessageType,
-    SynchronizeAppSearchError,
 )
 
 from .synchronize_app_search import SynchronizeAppSearch
@@ -65,7 +64,7 @@ def test__synchronize_app_search_valid_input_event(environment: StreamExecutionE
 
     with patch(
         __package__ + ".synchronize_app_search.EVENT_HANDLERS",
-        new={EntityMessageType.ENTITY_CREATED: [Mock(return_value=[expected_document])]},
+        new={EntityMessageType.ENTITY_CREATED: [Mock(return_value={"1234": expected_document})]},
     ):
         synchronize_app_search = SynchronizeAppSearch(data_stream, Mock, "test-index")
         output = list(synchronize_app_search.main.execute_and_collect())
@@ -156,10 +155,6 @@ def test__synchronize_app_search_handle_processing_error(
     data_stream = environment.from_collection([entity_message])
 
     synchronize_app_search = SynchronizeAppSearch(data_stream, Mock, "test-index")
-    output = list(synchronize_app_search.synchronize_app_search_errors.execute_and_collect())
+    output = list(synchronize_app_search.main.execute_and_collect())
 
-    assert len(output) == 1
-
-    error = output[0]
-
-    assert isinstance(error, SynchronizeAppSearchError)
+    assert len(output) == 0

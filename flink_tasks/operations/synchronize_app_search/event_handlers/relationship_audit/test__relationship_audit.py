@@ -54,6 +54,14 @@ def test__handle_relationship_audit_inserted_relationship() -> None:
                 ),
             ],
         },
+        old_value=BusinessDataDomain(
+            guid="2345",
+            type_name="m4i_data_domain",
+            attributes=BusinessDataDomainAttributes(
+                qualified_name="data_domain",
+                name="Data Domain",
+            ),
+        ),
     )
 
     current_document = AppSearchDocument(
@@ -95,9 +103,7 @@ def test__handle_relationship_audit_inserted_relationship() -> None:
             return_value=child_documents,
         ),
     ):
-        updated_documents = {
-            document.guid: document for document in handle_relationship_audit(message, Mock(), "test_index")
-        }
+        updated_documents = handle_relationship_audit(message, Mock(), "test_index", {})
 
         assert len(updated_documents) == 2
 
@@ -155,6 +161,14 @@ def test__handle_relationship_audit_deleted_relationship() -> None:
                 ),
             ],
         },
+        new_value=BusinessDataDomain(
+            guid="2345",
+            type_name="m4i_data_domain",
+            attributes=BusinessDataDomainAttributes(
+                qualified_name="data_domain",
+                name="Data Domain",
+            ),
+        ),
     )
 
     current_document = AppSearchDocument(
@@ -208,9 +222,7 @@ def test__handle_relationship_audit_deleted_relationship() -> None:
             return_value=child_documents,
         ),
     ):
-        updated_documents = {
-            document.guid: document for document in handle_relationship_audit(message, Mock(), "test_index")
-        }
+        updated_documents = handle_relationship_audit(message, Mock(), "test_index", {})
 
         assert len(updated_documents) == 2
 
