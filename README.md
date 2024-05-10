@@ -37,9 +37,10 @@ This project includes several services for end-to-end testing of Flink jobs. Eac
 
 The following Flink jobs are available for development and testing:
 
-| Job Name                 | Description                                                                      |
-| ------------------------ | -------------------------------------------------------------------------------- |
-| `synchronize_app_search` | Synchronizes data from Apache Atlas to Elasticsearch for the App Search service. |
+| Job Name                 | Description                                                                                |
+|--------------------------|--------------------------------------------------------------------------------------------|
+| `synchronize_app_search` | Synchronizes data from Apache Atlas to Elasticsearch for the App Search service.           |
+| `publish_state`          | Publishes versioned data from Apache Atlas to Elasticsearch for the Publish State service. |
 
 > **Note**: Each job is a Python script located in the `flink_jobs` directory.
 
