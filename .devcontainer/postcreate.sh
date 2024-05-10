@@ -38,3 +38,6 @@ if [ -z "$(git config --global user.email)" ]; then
     read -p "Enter your Git email: " git_email
     git config --global user.email "$git_email"
 fi
+
+# create a mock app search index
+curl -X PUT "http://localhost:9092/${ELASTICSEARCH_APP_SEARCH_INDEX_NAME}"

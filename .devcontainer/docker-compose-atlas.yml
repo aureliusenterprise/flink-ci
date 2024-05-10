@@ -21,16 +21,20 @@ services:
       KEYCLOAK_IMPORT: /tmp/keycloak-config/atlas-dev.json
       KEYCLOAK_PORT: 8180
     volumes:
-      - /tmp/keycloak-config:/tmp/keycloak-config
       - keycloak-data:/opt/jboss/keycloak/standalone/data
-      - /tmp/keycloak-settings/standalone.xml:/opt/jboss/keycloak/standalone/configuration/standalone.xml
     network_mode: service:dev
     restart: unless-stopped
-    command: ["-b 0.0.0.0", "-bmanagement 0.0.0.0", "-Djboss.http.port=8180"]
+    command: ["-b 0.0.0.0", "-bmanagement 0.0.0.0", "-Djboss.http.port=$KEYCLOAK_PORT"]
 
 volumes:
   atlas:
   atlas-config:
-  keycloak-config:
   keycloak-data:
+
+configs:
+  keycloak-config:
+    file: ../keycloak/config/atlas-dev.json
+    target: /tmp/keycloak-config/atlas-dev.json
   keycloak-settings:
+    file: ../keycloak/settings/standalone.xml
+    target: /opt/jboss/keycloak/standalone/configuration/standalone.xml
