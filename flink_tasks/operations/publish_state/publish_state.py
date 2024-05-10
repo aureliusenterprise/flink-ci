@@ -3,7 +3,6 @@ from pyflink.datastream import DataStream
 from .operations import (
     ElasticsearchFactory,
     GetPreviousEntity,
-    PrepareNotificationToIndex,
 )
 
 
@@ -29,7 +28,10 @@ class PublishState:
     """
 
     def __init__(
-        self, data_stream: DataStream, elastic_factory: ElasticsearchFactory, index_name: str,
+        self,
+        data_stream: DataStream,
+        elastic_factory: ElasticsearchFactory,
+        index_name: str,
     ) -> None:
         """
         Initialize the PublishState with an input Kafka notifications stream.
@@ -47,15 +49,7 @@ class PublishState:
 
         # Initialize the stage for retrieving the previous entity versions from a database.
         self.previous_entity_retrieval = GetPreviousEntity(
-            self.data_stream, elastic_factory, index_name,
-        )
-
-        # Initialize the stage for preparing the validated notifications for indexing.
-        self.index_preparation = PrepareNotificationToIndex(
             self.data_stream,
-        )
-
-        # Aggregate the errors from the various processing stages.
-        self.errors = self.index_preparation.errors.union(
-            self.previous_entity_retrieval.errors,
+            elastic_factory,
+            index_name,
         )

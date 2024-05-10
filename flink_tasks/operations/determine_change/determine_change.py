@@ -1,3 +1,5 @@
+import logging
+
 from pyflink.datastream import DataStream, MapFunction, OutputTag
 
 from flink_tasks import AtlasChangeMessageWithPreviousVersion, EntityMessage
@@ -20,8 +22,8 @@ class DetermineChangeFunction(MapFunction):
 
     def map(
         self,
-        value: AtlasChangeMessageWithPreviousVersion,
-    ) -> list[EntityMessage] | tuple[OutputTag, Exception]:
+        value: AtlasChangeMessageWithPreviousVersion | Exception,
+    ) -> list[EntityMessage] | list[Exception]:
         """
         Process the incoming message to determine changes using predefined event handlers.
 
@@ -36,11 +38,17 @@ class DetermineChangeFunction(MapFunction):
             Returns a list of `EntityMessage` if changes are successfully determined, or a tuple
             containing `OutputTag` and `Exception` if an error occurs during processing.
         """
+        logging.debug("DetermineChangeFunction: %s", value)
+
+        if isinstance(value, Exception):
+            return [value]
+
         operation_type = value.message.operation_type
 
         if operation_type not in EVENT_HANDLERS:
             message = f"Unknown event type: {operation_type}"
-            return UNKNOWN_EVENT_TYPE_TAG, NotImplementedError(message)
+            logging.error(message)
+            return [NotImplementedError(message)]
 
         event_handler = EVENT_HANDLERS[operation_type]
 
@@ -49,7 +57,10 @@ class DetermineChangeFunction(MapFunction):
         try:
             messages = event_handler(value)
         except ValueError as e:
-            return DETERMINE_CHANGE_ERROR_TAG, e
+            logging.exception("Error determining change")
+            return [e]
+
+        logging.debug("Identified changes: %s", messages)
 
         return messages
 
@@ -82,18 +93,6 @@ class DetermineChange:
 
         self.changes = self.data_stream.map(DetermineChangeFunction()).name("determine_change")
 
-        self.unknown_event_types = self.changes.get_side_output(UNKNOWN_EVENT_TYPE_TAG).name(
-            "unknown_event_types",
-        )
-
-        self.determine_change_errors = self.changes.get_side_output(
-            DETERMINE_CHANGE_ERROR_TAG,
-        ).name("determine_change_errors")
-
         self.main = self.changes.flat_map(
             lambda messages: (message for message in messages),
         ).name("determine_change_results")
-
-        self.errors = self.unknown_event_types.union(
-            self.determine_change_errors,
-        )

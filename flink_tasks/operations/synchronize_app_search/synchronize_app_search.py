@@ -1,4 +1,6 @@
+import logging
 from collections.abc import Callable
+from functools import reduce
 
 from elasticsearch import Elasticsearch
 from pyflink.datastream import DataStream, MapFunction, OutputTag, RuntimeContext
@@ -14,13 +16,14 @@ from .event_handlers import (
     handle_delete_breadcrumbs,
     handle_delete_derived_entities,
     handle_entity_created,
+    handle_relationship_audit,
     handle_update_attributes,
     handle_update_breadcrumbs,
     handle_update_derived_entities,
 )
 
 ElasticsearchFactory = Callable[[], Elasticsearch]
-EventHandler = Callable[[EntityMessage, Elasticsearch, str], list[AppSearchDocument]]
+EventHandler = Callable[[EntityMessage, Elasticsearch, str, dict[str, AppSearchDocument]], dict[str, AppSearchDocument]]
 
 EVENT_HANDLERS: dict[EntityMessageType, list[EventHandler]] = {
     EntityMessageType.ENTITY_CREATED: [handle_entity_created],
@@ -30,6 +33,7 @@ EVENT_HANDLERS: dict[EntityMessageType, list[EventHandler]] = {
         handle_update_derived_entities,
     ],
     EntityMessageType.ENTITY_DELETED: [handle_delete_breadcrumbs, handle_delete_derived_entities],
+    EntityMessageType.ENTITY_RELATIONSHIP_AUDIT: [handle_relationship_audit],
 }
 
 UNKNOWN_EVENT_TYPE_TAG = OutputTag("unknown_event_type")
@@ -75,8 +79,8 @@ class SynchronizeAppSearchFunction(MapFunction):
 
     def map(
         self,
-        value: EntityMessage,
-    ) -> list[tuple[str, AppSearchDocument | None]] | tuple[OutputTag, Exception]:
+        value: EntityMessage | Exception,
+    ) -> list[tuple[str, AppSearchDocument | None]] | list[Exception]:
         """
         Process an EntityMessage and perform actions based on the type of change event.
 
@@ -87,33 +91,43 @@ class SynchronizeAppSearchFunction(MapFunction):
 
         Returns
         -------
-        list[tuple[str, AppSearchDocument | None]] | tuple[OutputTag, Exception]
-            A list of tuples containing document GUIDs and documents, or a tuple of an OutputTag and
-            an Exception.
+        list[tuple[str, AppSearchDocument | None]] | list[Exception]
+            A list of tuples containing document GUIDs and documents, or a list of Exceptions.
         """
-        result: list[tuple[str, AppSearchDocument | None]] = []
+        if isinstance(value, Exception):
+            logging.debug("Passing down error: %s", value)
+            return [value]
+
+        logging.info("SynchronizeAppSearchFunction: %s", value)
 
         event_type = value.event_type
 
         if event_type not in EVENT_HANDLERS:
             message = f"Unknown event type: {event_type}"
-            return UNKNOWN_EVENT_TYPE_TAG, NotImplementedError(message)
+            logging.error(message)
+            return [NotImplementedError(message)]
 
         event_handlers = EVENT_HANDLERS[event_type]
 
+        updated_documents: dict[str, AppSearchDocument] = {}
+
         try:
-            result.extend(
-                (doc.guid, doc)
-                for handler in event_handlers
-                for doc in handler(value, self.elastic, self.index_name)
+            updated_documents = reduce(
+                lambda docs, handler: handler(value, self.elastic, self.index_name, docs),
+                event_handlers,
+                {},
             )
 
             if event_type == EntityMessageType.ENTITY_DELETED:
-                result.append((value.guid, None))
+                updated_documents[value.guid] = None  # type: ignore
         except SynchronizeAppSearchError as e:
-            return SYNCHRONIZE_APP_SEARCH_ERROR_TAG, e
+            return [e]
 
-        return result
+        result = list(updated_documents.items())
+
+        logging.info("Updated documents: %s", result)
+
+        return result  # type: ignore
 
     def close(self) -> None:
         """Close the Elasticsearch client. This method is called when the function is closed."""
@@ -130,21 +144,15 @@ class SynchronizeAppSearch:
         The data stream that contains change messages.
     app_search_documents : DataStream
         The processed stream of App Search documents as a batch per change.
-    unknown_event_types : DataStream
-        The stream containing messages with unknown event types.
-    synchronize_app_search_errors : DataStream
-        The stream containing synchronization errors.
     main : DataStream
         The stream of individual App Search documents.
-    errors : DataStream
-        The unified stream of errors.
     """
 
     def __init__(
-        self,
-        data_stream: DataStream,
-        elastic_factory: ElasticsearchFactory,
-        index_name: str,
+            self,
+            data_stream: DataStream,
+            elastic_factory: ElasticsearchFactory,
+            index_name: str,
     ) -> None:
         self.data_stream = data_stream
 
@@ -152,16 +160,8 @@ class SynchronizeAppSearch:
             SynchronizeAppSearchFunction(elastic_factory, index_name),
         ).name("synchronize_app_search")
 
-        self.unknown_event_types = self.app_search_documents.get_side_output(
-            UNKNOWN_EVENT_TYPE_TAG,
-        ).name("unknown_event_types")
-
-        self.synchronize_app_search_errors = self.app_search_documents.get_side_output(
-            SYNCHRONIZE_APP_SEARCH_ERROR_TAG,
-        ).name("synchronize_app_search_errors")
-
         self.main = self.app_search_documents.flat_map(
-            lambda documents: (document for document in documents),
+            lambda documents: (
+                document for document in documents if not isinstance(document, Exception)
+            ),
         ).name("app_search_documents")
-
-        self.errors = self.unknown_event_types.union(self.synchronize_app_search_errors)

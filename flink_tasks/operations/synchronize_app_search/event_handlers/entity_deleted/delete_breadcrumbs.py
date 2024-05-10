@@ -5,6 +5,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
+from flink_tasks.utils import ExponentialBackoff, retry
 
 
 class EntityDataNotProvidedError(SynchronizeAppSearchError):
@@ -22,6 +23,7 @@ class EntityDataNotProvidedError(SynchronizeAppSearchError):
         super().__init__(f"Entity data not provided for entity {guid}")
 
 
+@retry(retry_strategy=ExponentialBackoff())
 def get_documents(
     query: dict,
     elastic: Elasticsearch,
@@ -52,7 +54,8 @@ def update_document_breadcrumb(
     guid: str,
     elastic: Elasticsearch,
     index_name: str,
-) -> Generator[AppSearchDocument, None, None]:
+    updated_documents: dict[str, AppSearchDocument],
+) -> dict[str, AppSearchDocument]:
     """
     Update the breadcrumb information in documents related to a specified entity.
 
@@ -76,9 +79,14 @@ def update_document_breadcrumb(
         A generator of AppSearchDocument instances with modified breadcrumbs.
     """
     # Find all documents that reference the entity in their breadcrumb
-    query = {"query": {"terms": {"breadcrumb_guid": [guid]}}}
+    query = {"query": {"match": {"breadcrumbguid": {"query": guid, "operator": "and"}}}}
+
+    logging.debug("Searching for documents with breadcrumb containing entity %s", guid)
 
     for document in get_documents(query, elastic, index_name):
+        if document.guid in updated_documents:
+            document = updated_documents[document.guid]  # noqa: PLW2901
+
         breadcrumb_guid = document.breadcrumbguid
         breadcrumb_name = document.breadcrumbname
         breadcrumb_type = document.breadcrumbtype
@@ -97,6 +105,11 @@ def update_document_breadcrumb(
             index = breadcrumb_guid.index(guid)
         except ValueError:
             # The guid is not in the breadcrumb. Should not be possible given the query.
+            logging.exception(
+                "Entity %s not found in breadcrumb for document %s. Skipping document update.",
+                guid,
+                document.guid,
+            )
             continue
 
         # Remove the entity and its parents from the breadcrumb
@@ -104,14 +117,22 @@ def update_document_breadcrumb(
         document.breadcrumbname = document.breadcrumbname[index + 1 :]
         document.breadcrumbtype = document.breadcrumbtype[index + 1 :]
 
-        yield document
+        logging.info("Updated breadcrumb for document %s", document.guid)
+        logging.debug("Breadcrumb GUID: %s", document.breadcrumbguid)
+        logging.debug("Breadcrumb Name: %s", document.breadcrumbname)
+        logging.debug("Breadcrumb Type: %s", document.breadcrumbtype)
+
+        updated_documents[document.guid] = document
+
+    return updated_documents
 
 
 def handle_delete_breadcrumbs(
     message: EntityMessage,
     elastic: Elasticsearch,
     index_name: str,
-) -> list[AppSearchDocument]:
+    updated_documents: dict[str, AppSearchDocument],
+) -> dict[str, AppSearchDocument]:
     """
     Handle the update of breadcrumb information in documents based on an entity delete message.
 
@@ -141,6 +162,9 @@ def handle_delete_breadcrumbs(
     entity_details = message.old_value
 
     if entity_details is None:
+        logging.error("Entity data not provided for entity %s", message.guid)
         raise EntityDataNotProvidedError(message.guid)
 
-    return list(update_document_breadcrumb(entity_details.guid, elastic, index_name))
+    update_document_breadcrumb(entity_details.guid, elastic, index_name, updated_documents)
+
+    return updated_documents

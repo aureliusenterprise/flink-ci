@@ -1,11 +1,12 @@
+import logging
 from collections.abc import Generator
 from functools import partial
-from typing import cast
 
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
+from flink_tasks.utils import ExponentialBackoff, retry
 
 
 class EntityDataNotProvidedError(SynchronizeAppSearchError):
@@ -23,6 +24,22 @@ class EntityDataNotProvidedError(SynchronizeAppSearchError):
         super().__init__(f"Entity data not provided for entity {guid}")
 
 
+class EntityNameNotFoundError(SynchronizeAppSearchError):
+    """Exception raised when the entity name is not found in the entity details."""
+
+    def __init__(self, guid: str) -> None:
+        """
+        Initialize the exception.
+
+        Parameters
+        ----------
+        guid : str
+            The GUID of the entity for which the name was not found.
+        """
+        super().__init__(f"Entity name not found for entity {guid}")
+
+
+@retry(retry_strategy=ExponentialBackoff())
 def get_documents(
     query: dict,
     elastic: Elasticsearch,
@@ -54,9 +71,10 @@ def handle_derived_entities_update(  # noqa: PLR0913
     entity_name: str,
     elastic: Elasticsearch,
     index_name: str,
+    updated_documents: dict[str, AppSearchDocument],
     relationship_attribute_guid: str,
     relationship_attribute_name: str,
-) -> Generator[AppSearchDocument, None, None]:
+) -> dict[str, AppSearchDocument]:
     """
     Find related entities in Elasticsearch and update their references to the given entity.
 
@@ -81,9 +99,14 @@ def handle_derived_entities_update(  # noqa: PLR0913
         Yields updated AppSearchDocument instances.
     """
     # Get all documents where the entity GUID is present in the relationship field
-    query = {"query": {"terms": {relationship_attribute_guid: [entity_guid]}}}
+    query = {"query": {"match": {relationship_attribute_guid: {"query": entity_guid, "operator": "and"}}}}
+
+    logging.info("Searching for documents by %s", query)
 
     for document in get_documents(query, elastic, index_name):
+        if document.guid in updated_documents:
+            document = updated_documents[document.guid]  # noqa: PLW2901
+
         # The query guarantees that the relationship attributes are present in the document.
         # No need for try/except block to handle a potential KeyError.
         guids: list[str] = getattr(document, relationship_attribute_guid)
@@ -93,10 +116,21 @@ def handle_derived_entities_update(  # noqa: PLR0913
             index = guids.index(entity_guid)
         except ValueError:
             # Skip this document if the entity GUID is not found
+            logging.exception(
+                "Entity %s not found in relationship %s for document %s. Skipping document update.",
+                entity_guid,
+                relationship_attribute_guid,
+                document.guid,
+            )
             continue
 
         names[index] = entity_name
-        yield document
+
+        logging.info("Updated relationship %s for document %s: %s", relationship_attribute_name, document.guid, names)
+
+        updated_documents[document.guid] = document
+
+    return updated_documents
 
 
 """
@@ -113,6 +147,8 @@ RELATIONSHIP_MAP = {
     "m4i_dataset": ["deriveddataset"],
     "m4i_collection": ["derivedcollection"],
     "m4i_system": ["derivedsystem"],
+    "m4i_person": ["derivedperson"],
+    "m4i_generic_process": ["derivedprocess"],
 }
 
 
@@ -142,7 +178,8 @@ def handle_update_derived_entities(
     message: EntityMessage,
     elastic: Elasticsearch,
     index_name: str,
-) -> list[AppSearchDocument]:
+    updated_documents: dict[str, AppSearchDocument],
+) -> dict[str, AppSearchDocument]:
     """
     Update derived entities in Elasticsearch based on the given EntityMessage.
 
@@ -168,21 +205,26 @@ def handle_update_derived_entities(
     updated_attributes = set(message.inserted_attributes) | set(message.changed_attributes)
 
     if "name" not in updated_attributes:
-        return []
+        logging.debug("Name not updated. Skipping derived entity update.")
+        return updated_documents
 
     entity_details = message.new_value
 
     if entity_details is None:
+        logging.error("Entity data not provided for entity %s", message.guid)
         raise EntityDataNotProvidedError(message.guid)
 
-    attributes: dict[str, str] = cast(dict, entity_details.attributes.unmapped_attributes)
-    entity_name = attributes.get("name", "")
+    entity_name = getattr(entity_details.attributes, "name", None)
+
+    if entity_name is None:
+        logging.error("Entity name not found for entity %s", message.guid)
+        raise EntityNameNotFoundError(entity_details.guid)
+
     entity_type = entity_details.type_name
 
     handlers = DERIVED_ENTITY_UPDATE_HANDLERS.get(entity_type, [])
 
-    return [
-        entity
-        for handler in handlers
-        for entity in handler(entity_details.guid, entity_name, elastic, index_name)
-    ]
+    for handler in handlers:
+        handler(entity_details.guid, entity_name, elastic, index_name, updated_documents)
+
+    return updated_documents

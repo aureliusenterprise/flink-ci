@@ -12,13 +12,12 @@ if __name__ == "__main__":
     store.load(
         {
             "keycloak.client.id": os.environ.get("KEYCLOAK_CLIENT_ID"),
-            "keycloak.credentials.username": os.environ.get("KEYCLOAK_USERNAME", "admin"),
-            "keycloak.credentials.password": os.environ.get("KEYCLOAK_PASSWORD", "admin"),
+            "keycloak.credentials.username": os.environ.get("KEYCLOAK_USERNAME"),
+            "keycloak.credentials.password": os.environ.get("KEYCLOAK_ATLAS_ADMIN_PASSWORD"),
             "keycloak.realm.name": os.environ.get("KEYCLOAK_REALM_NAME"),
             "keycloak.client.secret.key": os.environ.get("KEYCLOAK_CLIENT_SECRET_KEY"),
-            "keycloak.server.url": "http://localhost:8180/auth/",
-
+            "keycloak.server.url": os.environ.get("KEYCLOAK_SERVER_URL"),
         },
     )
 
-    print(get_keycloak_token()) #noqa: T201
+    print(get_keycloak_token())  # noqa: T201

@@ -23,7 +23,8 @@
 		"ghcr.io/rocker-org/devcontainer-features/apt-packages:1": {
 			"packages": "gdb"
 		},
-		"ghcr.io/paul-gilber/devcontainer-features/jinja2-cli-homebrew:1": {}
+		"ghcr.io/paul-gilber/devcontainer-features/jinja2-cli-homebrew:1": {},
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
 	},
 	"updateContentCommand": "bash .devcontainer/updatecontent.sh",
 	"postCreateCommand": "bash .devcontainer/postcreate.sh",

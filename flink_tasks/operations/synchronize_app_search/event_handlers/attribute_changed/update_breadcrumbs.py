@@ -1,11 +1,11 @@
 import logging
 from collections.abc import Generator
-from typing import cast
 
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
+from flink_tasks.utils import ExponentialBackoff, retry
 
 
 class EntityDataNotProvidedError(SynchronizeAppSearchError):
@@ -38,6 +38,7 @@ class EntityNameNotFoundError(SynchronizeAppSearchError):
         super().__init__(f"Entity name not found for entity {guid}")
 
 
+@retry(retry_strategy=ExponentialBackoff())
 def get_documents(
     query: dict,
     elastic: Elasticsearch,
@@ -65,8 +66,12 @@ def get_documents(
 
 
 def update_document_breadcrumb(
-    guid: str, name: str, elastic: Elasticsearch, index_name: str,
-) -> Generator[AppSearchDocument, None, None]:
+    guid: str,
+    name: str,
+    elastic: Elasticsearch,
+    index_name: str,
+    updated_documents: dict[str, AppSearchDocument],
+) -> dict[str, AppSearchDocument]:
     """
     Update the breadcrumb information in documents related to a specified entity.
 
@@ -90,9 +95,14 @@ def update_document_breadcrumb(
         A generator of AppSearchDocument instances with modified breadcrumbs.
     """
     # Find all documents that reference the entity in their breadcrumb
-    query = {"query": {"terms": {"breadcrumb_guid": [guid]}}}
+    query = {"query": {"match": {"breadcrumbguid": {"query": guid, "operator": "and"}}}}
+
+    logging.debug("Searching for documents with breadcrumb containing entity %s", guid)
 
     for document in get_documents(query, elastic, index_name):
+        if document.guid in updated_documents:
+            document = updated_documents[document.guid]  # noqa: PLW2901
+
         breadcrumb_guid = document.breadcrumbguid
         breadcrumb_name = document.breadcrumbname
 
@@ -107,22 +117,36 @@ def update_document_breadcrumb(
             index = breadcrumb_guid.index(guid)
         except ValueError:
             # The guid is not in the breadcrumb. Should not be possible given the query.
+            logging.exception(
+                "Entity %s not found in breadcrumb for document %s. Skipping document update.",
+                guid,
+                document.guid,
+            )
             continue
 
         if breadcrumb_name[index] == name:
             # The name is already correct
+            logging.debug(
+                "Breadcrumb for document %s already has the correct name. Skipping document update.",
+                document.guid,
+            )
             continue
 
         breadcrumb_name[index] = name
 
-        yield document
+        updated_documents[document.guid] = document
+
+        logging.info("Updated breadcrumb for document %s: %s", document.guid, breadcrumb_name)
+
+    return updated_documents
 
 
 def handle_update_breadcrumbs(
     message: EntityMessage,
     elastic: Elasticsearch,
     index_name: str,
-) -> list[AppSearchDocument]:
+    updated_documents: dict[str, AppSearchDocument],
+) -> dict[str, AppSearchDocument]:
     """
     Handle the update of breadcrumb information in documents based on an entity update message.
 
@@ -152,18 +176,19 @@ def handle_update_breadcrumbs(
     updated_attributes = set(message.inserted_attributes) | set(message.changed_attributes)
 
     if "name" not in updated_attributes:
-        return []
+        logging.debug("Name not updated. Skipping breadcrumb update.")
+        return updated_documents
 
     entity_details = message.new_value
 
     if entity_details is None:
+        logging.error("Entity data not provided for entity %s", message.guid)
         raise EntityDataNotProvidedError(message.guid)
 
-    attributes: dict[str, str] = cast(dict, entity_details.attributes.unmapped_attributes)
-
-    entity_name = attributes.get("name")
+    entity_name = getattr(entity_details.attributes, "name", None)
 
     if entity_name is None:
+        logging.error("Entity name not found for entity %s", entity_details.guid)
         raise EntityNameNotFoundError(entity_details.guid)
 
-    return list(update_document_breadcrumb(entity_details.guid, entity_name, elastic, index_name))
+    return update_document_breadcrumb(entity_details.guid, entity_name, elastic, index_name, updated_documents)

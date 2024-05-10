@@ -41,11 +41,14 @@ def test_sum_with_fixture(example_data: list[int]) -> None:
     assert sum(example_data) == 15
 
 
-@pytest.mark.parametrize(("input_data", "expected_output"), [
-    ([1, 2, 3], 6),
-    ([4, 5, 6], 15),
-    ([], 0),
-])
+@pytest.mark.parametrize(
+    ("input_data", "expected_output"),
+    [
+        ([1, 2, 3], 6),
+        ([4, 5, 6], 15),
+        ([], 0),
+    ],
+)
 def test_sum_with_parameterization(input_data: list[int], expected_output: int) -> None:
     """
     Example of a parameterized test case.

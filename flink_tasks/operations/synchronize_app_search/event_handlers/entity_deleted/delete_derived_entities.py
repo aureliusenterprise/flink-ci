@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Generator
 from functools import partial
 
@@ -5,6 +6,7 @@ from elasticsearch import Elasticsearch
 from elasticsearch.helpers import scan
 
 from flink_tasks import AppSearchDocument, EntityMessage, SynchronizeAppSearchError
+from flink_tasks.utils import ExponentialBackoff, retry
 
 
 class EntityDataNotProvidedError(SynchronizeAppSearchError):
@@ -22,6 +24,7 @@ class EntityDataNotProvidedError(SynchronizeAppSearchError):
         super().__init__(f"Entity data not provided for entity {guid}")
 
 
+@retry(retry_strategy=ExponentialBackoff())
 def get_documents(
     query: dict,
     elastic: Elasticsearch,
@@ -48,13 +51,14 @@ def get_documents(
         yield AppSearchDocument.from_dict(result["_source"])
 
 
-def handle_derived_entities_delete(
+def handle_derived_entities_delete(  # noqa: PLR0913
     entity_guid: str,
     elastic: Elasticsearch,
     index_name: str,
+    updated_documents: dict[str, AppSearchDocument],
     relationship_attribute_guid: str,
     relationship_attribute_name: str,
-) -> Generator[AppSearchDocument, None, None]:
+) -> dict[str, AppSearchDocument]:
     """
     Find related entities in Elasticsearch and update their references to the given entity.
 
@@ -83,13 +87,25 @@ def handle_derived_entities_delete(
     # Get the Elasticsearch documents for all related entities
     query = {
         "query": {
-            "terms": {
-                relationship_attribute_guid: [entity_guid],
+            "match": {
+                relationship_attribute_guid: {
+                    "query": entity_guid,
+                    "operator": "and",
+                },
             },
         },
     }
 
+    logging.debug(
+        "Searching for documents with relationship %s containing entity %s",
+        relationship_attribute_guid,
+        entity_guid,
+    )
+
     for document in get_documents(query, elastic, index_name):
+        if document.guid in updated_documents:
+            document = updated_documents[document.guid]  # noqa: PLW2901
+
         # The query guarantees that the relationship attributes are present in the document.
         # No need for try/except block to handle a potential KeyError.
         guids: list[str] = getattr(document, relationship_attribute_guid)
@@ -99,12 +115,24 @@ def handle_derived_entities_delete(
             index = guids.index(entity_guid)
         except ValueError:
             # Skip this document if the entity GUID is not found
+            logging.exception(
+                "Entity %s not found in relationship %s for document %s. Skipping document update.",
+                entity_guid,
+                relationship_attribute_guid,
+                document.guid,
+            )
             continue
 
         del guids[index]
         del names[index]
 
-        yield document
+        logging.info("Deleted relationship %s for document %s", relationship_attribute_name, document.guid)
+        logging.debug("Updated GUIDs: %s", guids)
+        logging.debug("Updated names: %s", names)
+
+        updated_documents[document.guid] = document
+
+    return updated_documents
 
 
 """
@@ -121,6 +149,8 @@ RELATIONSHIP_MAP = {
     "m4i_dataset": ["deriveddataset"],
     "m4i_collection": ["derivedcollection"],
     "m4i_system": ["derivedsystem"],
+    "m4i_person": ["derivedperson"],
+    "m4i_generic_process": ["derivedprocess"],
 }
 
 
@@ -150,7 +180,8 @@ def handle_delete_derived_entities(
     message: EntityMessage,
     elastic: Elasticsearch,
     index_name: str,
-) -> list[AppSearchDocument]:
+    updated_documents: dict[str, AppSearchDocument],
+) -> dict[str, AppSearchDocument]:
     """
     Update derived entities in Elasticsearch based on the given EntityMessage.
 
@@ -176,14 +207,14 @@ def handle_delete_derived_entities(
     entity_details = message.old_value
 
     if entity_details is None:
+        logging.error("Entity data not provided for entity %s", message.guid)
         raise EntityDataNotProvidedError(message.guid)
 
     entity_type = entity_details.type_name
 
     handlers = DERIVED_ENTITY_UPDATE_HANDLERS.get(entity_type, [])
 
-    return [
-        entity
-        for handler in handlers
-        for entity in handler(entity_details.guid, elastic, index_name)
-    ]
+    for handler in handlers:
+        handler(entity_details.guid, elastic, index_name, updated_documents)
+
+    return updated_documents

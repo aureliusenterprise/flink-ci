@@ -34,7 +34,13 @@ def handle_attribute_changes(
         changes are detected. Returns None if no changes are detected.
     """
     attributes_dict = current.attributes.to_dict()
+    if "unmappedAttributes" in attributes_dict:
+        del attributes_dict["unmappedAttributes"]
+
     previous_attributes_dict = previous.attributes.to_dict()
+
+    if "unmappedAttributes" in  previous_attributes_dict:
+        del previous_attributes_dict["unmappedAttributes"]
 
     inserted_attributes = [key for key in attributes_dict if key not in previous_attributes_dict]
 
@@ -87,6 +93,9 @@ def get_relationships_diff(a: Entity, b: Entity) -> dict[str, list[ObjectId]]:
 
     if a.relationship_attributes is not None:
         for relationships in a.relationship_attributes.values():
+            if not relationships:
+                continue
+
             a_relationships.update(relationship.guid for relationship in relationships)
 
     difference: dict[str, list[ObjectId]] = {}
@@ -95,10 +104,11 @@ def get_relationships_diff(a: Entity, b: Entity) -> dict[str, list[ObjectId]]:
         return difference
 
     for attribute, relationships in b.relationship_attributes.items():
+        if not relationships:
+            continue
+
         difference[attribute] = [
-            relationship
-            for relationship in relationships
-            if relationship.guid not in a_relationships
+            relationship for relationship in relationships if relationship.guid not in a_relationships
         ]
 
     return difference
@@ -133,13 +143,9 @@ def handle_relationship_changes(
     inserted_relationships = get_relationships_diff(previous, current)
     deleted_relationships = get_relationships_diff(current, previous)
 
-    has_inserted_relationships = any(
-        any(relationships) for relationships in inserted_relationships.values()
-    )
+    has_inserted_relationships = any(any(relationships) for relationships in inserted_relationships.values())
 
-    has_deleted_relationships = any(
-        any(relationships) for relationships in deleted_relationships.values()
-    )
+    has_deleted_relationships = any(any(relationships) for relationships in deleted_relationships.values())
 
     if not (has_inserted_relationships or has_deleted_relationships):
         return None

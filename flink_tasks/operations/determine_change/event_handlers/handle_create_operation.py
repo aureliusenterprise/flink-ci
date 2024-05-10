@@ -41,10 +41,15 @@ def handle_create_operation(
         raise ValueError(msg)
 
     attributes_dict = entity.attributes.to_dict()
+
+    if "unmappedAttributes" in attributes_dict:
+        del attributes_dict["unmappedAttributes"]
+
     inserted_attributes = list(attributes_dict.keys())
 
     entity_message = EntityMessage.from_change_message(
-        change_message=change_message, event_type=EntityMessageType.ENTITY_CREATED,
+        change_message=change_message,
+        event_type=EntityMessageType.ENTITY_CREATED,
     )
 
     entity_message.inserted_attributes = inserted_attributes

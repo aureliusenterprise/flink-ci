@@ -50,11 +50,11 @@ def test__handle_update_breadcrumb_on_entity_delete() -> None:
         __package__ + ".delete_breadcrumbs.get_documents",
         return_value=[document_to_update],
     ):
-        updated_documents = handle_delete_breadcrumbs(message, Mock(), "test_index")
+        updated_documents = handle_delete_breadcrumbs(message, Mock(), "test_index", {})
 
         assert len(updated_documents) == 1
 
-        updated_document = updated_documents[0]
+        updated_document = updated_documents["2345"]
         assert updated_document.guid == "2345"
         assert updated_document.breadcrumbguid == ["3456"]
         assert updated_document.breadcrumbname == ["Parent Entity Name"]
@@ -100,11 +100,11 @@ def test__handle_update_breadcrumb_removes_parents() -> None:
         __package__ + ".delete_breadcrumbs.get_documents",
         return_value=[document_to_update],
     ):
-        updated_documents = handle_delete_breadcrumbs(message, Mock(), "test_index")
+        updated_documents = handle_delete_breadcrumbs(message, Mock(), "test_index", {})
 
         assert len(updated_documents) == 1
 
-        updated_document = updated_documents[0]
+        updated_document = updated_documents["2345"]
         assert updated_document.guid == "2345"
         assert updated_document.typename == "m4i_data_entity"
         assert updated_document.name == "Entity Name"
@@ -112,6 +112,7 @@ def test__handle_update_breadcrumb_removes_parents() -> None:
         assert updated_document.breadcrumbguid == []
         assert updated_document.breadcrumbname == []
         assert updated_document.breadcrumbtype == []
+
 
 def test__handle_update_derived_entities_no_old_value() -> None:
     """
@@ -132,7 +133,7 @@ def test__handle_update_derived_entities_no_old_value() -> None:
     )
 
     with pytest.raises(EntityDataNotProvidedError):
-        handle_delete_breadcrumbs(message, Mock(), "test_index")
+        handle_delete_breadcrumbs(message, Mock(), "test_index", {})
 
 
 def test__handle_update_breadcrumbs_malformed_breadcrumb() -> None:
@@ -177,7 +178,7 @@ def test__handle_update_breadcrumbs_malformed_breadcrumb() -> None:
     ), patch(
         __package__ + ".delete_breadcrumbs.logging.error",
     ) as mock_logger:
-        updated_documents = handle_delete_breadcrumbs(message, Mock(), "test_index")
+        updated_documents = handle_delete_breadcrumbs(message, Mock(), "test_index", {})
 
         assert len(updated_documents) == 0
 
@@ -227,6 +228,6 @@ def test__handle_update_breadcrumbs_guid_not_present() -> None:
         __package__ + ".delete_breadcrumbs.get_documents",
         return_value=[document_to_update],
     ):
-        updated_documents = handle_delete_breadcrumbs(message, Mock(), "test_index")
+        updated_documents = handle_delete_breadcrumbs(message, Mock(), "test_index", {})
 
         assert len(updated_documents) == 0

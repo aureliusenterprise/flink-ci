@@ -42,7 +42,9 @@ class EntityMessage(DataClassJsonMixin):
 
     @classmethod
     def from_change_message(
-        cls, change_message: AtlasChangeMessage, event_type: EntityMessageType,
+        cls,
+        change_message: AtlasChangeMessage,
+        event_type: EntityMessageType,
     ) -> "EntityMessage":
         """
         Create an `EntityMessage` instance from an `AtlasChangeMessage`.

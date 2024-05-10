@@ -113,7 +113,7 @@ def test_get_entity_process_valid_input_event(
     with patch(__package__ + ".get_entity.get_entity_by_guid", return_value=entity):
         get_entity = GetEntity(
             data_stream=data_stream,
-            atlas_url="test", # atlas_url is not used in the test
+            atlas_url="test",  # atlas_url is not used in the test
             keycloak_factory=keycloak_factory,
             credentials=("username", "password"),
         )
@@ -162,12 +162,12 @@ def test_get_entity_handle_invalid_input_event(
 
     get_entity = GetEntity(
         data_stream=data_stream,
-        atlas_url="test", # atlas_url is not used in the test
+        atlas_url="test",  # atlas_url is not used in the test
         keycloak_factory=keycloak_factory,
         credentials=("username", "password"),
     )
 
-    output = list(get_entity.schema_errors.execute_and_collect())
+    output = list(get_entity.main.execute_and_collect())
 
     assert len(output) == 1
 
@@ -213,19 +213,18 @@ def test_get_entity_handle_event_without_entity(
 
     get_entity = GetEntity(
         data_stream=data_stream,
-        atlas_url="test", # atlas_url is not used in the test
+        atlas_url="test",  # atlas_url is not used in the test
         keycloak_factory=keycloak_factory,
         credentials=("username", "password"),
     )
 
-    output = list(get_entity.no_entity_errors.execute_and_collect())
+    output = list(get_entity.main.execute_and_collect())
 
     assert len(output) == 1
 
     error = output[0]
 
     assert isinstance(error, ValueError)
-    assert str(error) == "No entity found in message."
 
 
 def test_get_entity_handle_http_error_during_entity_lookup(
@@ -247,12 +246,12 @@ def test_get_entity_handle_http_error_during_entity_lookup(
     with patch(__package__ + ".get_entity.get_entity_by_guid", new=Mock(side_effect=HTTPError())):
         get_entity = GetEntity(
             data_stream=data_stream,
-            atlas_url="test", # atlas_url is not used in the test
+            atlas_url="test",  # atlas_url is not used in the test
             keycloak_factory=keycloak_factory,
             credentials=("username", "password"),
         )
 
-        output = list(get_entity.entity_lookup_errors.execute_and_collect())
+        output = list(get_entity.main.execute_and_collect())
 
         assert len(output) == 1
 
@@ -283,15 +282,15 @@ def test_get_entity_handle_keycloak_error_during_entity_lookup(
     ):
         get_entity = GetEntity(
             data_stream=data_stream,
-            atlas_url="test", # atlas_url is not used in the test
+            atlas_url="test",  # atlas_url is not used in the test
             keycloak_factory=keycloak_factory,
             credentials=("username", "password"),
         )
 
-        output = list(get_entity.entity_lookup_errors.execute_and_collect())
+        output = list(get_entity.main.execute_and_collect())
 
         assert len(output) == 1
 
         error = output[0]
 
-        assert isinstance(error, KeycloakError)
+        assert isinstance(error, RuntimeError)

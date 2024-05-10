@@ -1,28 +1,29 @@
 import asyncio
 import contextlib
+import logging
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import cast
 
+from aiohttp import ClientResponseError
 from aiohttp.web import HTTPError
 from m4i_atlas_core import (
     AtlasChangeMessage,
     ConfigStore,
+    Entity,
+    EntityAuditAction,
     ExistingEntityTypeException,
+    UnknownEntityTypeException,
     data_dictionary_entity_types,
     get_entity_by_guid,
     register_atlas_entity_types,
 )
 from marshmallow import ValidationError
-from pyflink.datastream import DataStream, OutputTag
+from pyflink.datastream import DataStream
 from pyflink.datastream.functions import MapFunction, RuntimeContext
 
+from flink_tasks.utils import ExponentialBackoff, retry
 from keycloak import KeycloakError, KeycloakOpenID
-
-# Define output tags for errors that can occur during processing.
-ENTITY_LOOKUP_ERROR_TAG = OutputTag("entity_lookup_error")
-NO_ENTITY_ERROR_TAG = OutputTag("no_entity")
-SCHEMA_ERROR_TAG = OutputTag("schema_error")
 
 # A type alias for a factory function that produces instances of KeycloakOpenID.
 KeycloakFactory = Callable[[], KeycloakOpenID]
@@ -89,7 +90,7 @@ class GetEntityFunction(MapFunction):
         """Close the event loop."""
         self.loop.close()
 
-    def map(self, value: str) -> AtlasChangeMessage | tuple[OutputTag, Exception]:
+    def map(self, value: str) -> AtlasChangeMessage | Exception:  # noqa: PLR0911
         """
         Process the incoming message and enrich it with entity details.
 
@@ -102,7 +103,7 @@ class GetEntityFunction(MapFunction):
         -------
         AtlasChangeMessage
             If the message is successfully enriched.
-        tuple[OutputTag, Exception]
+        Exception
             If there's an error during processing.
         """
         try:
@@ -113,30 +114,80 @@ class GetEntityFunction(MapFunction):
                 AtlasChangeMessage.schema().loads(value, many=False),
             )
         except ValidationError as e:
-            return SCHEMA_ERROR_TAG, e
+            logging.exception("Error deserializing message")
+            return e
+
+        logging.debug("Successfully deserialized message: %s", change_message)
 
         entity = change_message.message.entity
 
         if entity is None:
-            return NO_ENTITY_ERROR_TAG, ValueError("No entity found in message.")
+            logging.debug("No entity found in message: %s", change_message)
+            return ValueError(f"No entity found in message. Value={value}")
+
+        # Skipping types: m4i_source
+        if entity.type_name == "m4i_source":
+            logging.debug("Ignoring type: m4i_source, at %s", entity.guid)
+            return ValueError("Ignoring type: m4i_source")
+
+        if change_message.message.operation_type not in [
+            EntityAuditAction.ENTITY_CREATE,
+            EntityAuditAction.ENTITY_UPDATE,
+            EntityAuditAction.ENTITY_DELETE,
+        ]:
+            logging.debug("Ignoring message type: %s", change_message.message.operation_type)
+            return ValueError("Ignoring message type")
+
+        if change_message.message.operation_type == EntityAuditAction.ENTITY_DELETE:
+            return change_message
 
         try:
-            entity_details = self.loop.run_until_complete(
-                get_entity_by_guid(
-                    guid=entity.guid,
-                    entity_type=entity.type_name,
-                    access_token=self.access_token,
-                    cache_read=False,
-                ),
-            )
-        except HTTPError as e:
-            return ENTITY_LOOKUP_ERROR_TAG, RuntimeError(f"HTTP error during entity lookup: {e}")
-        except KeycloakError as e:
-            return ENTITY_LOOKUP_ERROR_TAG, e
+            entity_details = self.get_entity(entity.guid, entity.type_name)
+        except (HTTPError, KeycloakError) as e:
+            logging.exception("HTTP error during entity lookup")
+            return RuntimeError(f"HTTP error during entity lookup: {e}")
+        except UnknownEntityTypeException as e:
+            logging.exception("Unknown type for entity: %s", change_message)
+            return e
+        except ClientResponseError as e:
+            logging.exception("Can not find entity in atlas: %s", change_message)
+            return RuntimeError(f"HTTP error during entity lookup: {e}")
 
         change_message.message.entity = entity_details
 
+        logging.debug(
+            "Successfully enriched change message. GUID = %s, TYPE = %s",
+            entity_details.guid,
+            entity_details.type_name,
+        )
+
         return change_message
+
+    @retry(retry_strategy=ExponentialBackoff(), catch=(HTTPError, KeycloakError, ClientResponseError), max_retries=2)
+    def get_entity(self, guid: str, entity_type: str) -> Entity:
+        """
+        Get the entity details for the given GUID and entity type.
+
+        Parameters
+        ----------
+        guid : str
+            The GUID of the entity to fetch.
+        entity_type : str
+            The type of the entity to fetch.
+
+        Returns
+        -------
+        Entity
+            The entity details.
+        """
+        return self.loop.run_until_complete(
+            get_entity_by_guid(
+                guid=guid,
+                entity_type=entity_type,
+                access_token=self.access_token,
+                cache_read=False,
+            ),
+        )
 
     @property
     def access_token(self) -> str:
@@ -181,12 +232,6 @@ class GetEntity:
         The main data stream to be processed.
     main : DataStream
         The main data stream after processing with GetEntityFunction.
-    entity_lookup_errors : DataStream
-        Data stream for entity lookup errors.
-    no_entity_errors : DataStream
-        Data stream for messages with no entity.
-    errors : DataStream
-        Combined data stream of all errors.
     """
 
     def __init__(
@@ -213,15 +258,3 @@ class GetEntity:
         self.main = self.data_stream.map(
             GetEntityFunction(atlas_url, keycloak_factory, credentials),
         ).name("enriched_entities")
-
-        self.entity_lookup_errors = self.main.get_side_output(ENTITY_LOOKUP_ERROR_TAG).name(
-            "entity_lookup_errors",
-        )
-
-        self.no_entity_errors = self.main.get_side_output(NO_ENTITY_ERROR_TAG).name(
-            "no_entity_errors",
-        )
-
-        self.schema_errors = self.main.get_side_output(SCHEMA_ERROR_TAG).name("schema_errors")
-
-        self.errors = self.entity_lookup_errors.union(self.no_entity_errors, self.schema_errors)

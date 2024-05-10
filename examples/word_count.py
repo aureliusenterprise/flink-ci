@@ -4,7 +4,6 @@ from pyflink.common import Types
 from pyflink.datastream import StreamExecutionEnvironment
 
 if __name__ == "__main__":
-
     env = StreamExecutionEnvironment.get_execution_environment()
 
     # write all the data to one file
@@ -55,11 +54,10 @@ if __name__ == "__main__":
         yield from line.split()
 
     word_count = (
-        data_source
-        .flat_map(split)
+        data_source.flat_map(split)
         .map(lambda word: (word, 1), output_type=Types.TUPLE([Types.STRING(), Types.INT()]))
         .key_by(lambda i: i[0])
-        .reduce(lambda i,j: (i[0], i[1] + j[1]))
+        .reduce(lambda i, j: (i[0], i[1] + j[1]))
     )
 
     word_count.print()
