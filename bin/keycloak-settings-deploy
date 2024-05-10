@@ -1,7 +1,8 @@
 #!/bin/bash
 
 SOURCE_DIR=keycloak/settings/standalone.xml
-TARGET_DIR=/tmp/keycloak-settings/standalone.xml
+TARGET_DIR=/tmp/keycloak-settings/
 
 # Copy Apache Atlas settings to shared folder
-cp -rvf ${SOURCE_DIR} ${TARGET_DIR}
+mkdir -p $TARGET_DIR
+cp -avf ${SOURCE_DIR} ${TARGET_DIR}
