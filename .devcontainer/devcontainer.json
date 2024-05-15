@@ -26,6 +26,7 @@
 		"ghcr.io/paul-gilber/devcontainer-features/jinja2-cli-homebrew:1": {},
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
 	},
+    "mounts": [ "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind" ],
 	"updateContentCommand": "bash .devcontainer/updatecontent.sh",
 	"postCreateCommand": "bash .devcontainer/postcreate.sh",
 	// Configure tool-specific properties.

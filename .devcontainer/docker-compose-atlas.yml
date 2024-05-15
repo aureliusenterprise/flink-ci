@@ -20,11 +20,13 @@ services:
 
   keycloak:
     container_name: keycloak
-    image: aureliusatlas/docker-keycloak:16.1.0.1
+    image: aureliusatlas/docker-keycloak:16.0.1.3
     environment:
       KEYCLOAK_USER: admin
       KEYCLOAK_PASSWORD: admin
       KEYCLOAK_IMPORT: /tmp/keycloak-config/atlas-dev.json
+      KEYCLOAK_PORT: 8180
+      KEYCLOAK_REALM_NAME: "atlas-dev"
     volumes:
       - keycloak-data:/opt/jboss/keycloak/standalone/data
     configs:
