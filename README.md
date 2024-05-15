@@ -17,6 +17,8 @@ Leverage the provided [development container](https://containers.dev/) to automa
 
 📝 [**Devcontainer Guide**](.devcontainer/README.md)
 
+### First time?
+If this is your first time setting up the environment, make sure to run commands `create-admin-user` and `app-search-documents-create-index`. For further information about some useful scripts for development refer to the [Components](#components) section.
 ## Services
 
 This project includes several services for end-to-end testing of Flink jobs. Each service's purpose and UI link (if available) are listed below:
@@ -114,7 +116,14 @@ The following commands are available for Keycloak in the development environment
 | `get-keycloak-token`       | Retrieves a Keycloak token and prints it to the console.                                                         |
 | `keycloak-config-deploy`   | Deploys the Keycloak server configuration from this repository to the shared volume used by the Keycloak Server. |
 | `keycloak-settings-deploy` | Deploys the Keycloak realm settings from this repository to the shared volume used by the Keycloak Server.       |
+| `create-admin-user`        | Creates an Atlas user with ROLE_ADMIN role|
 
+### Elasticsearch
+
+The following commands are available for Elasticsearch in the development environment:
+| Command                    | Description                                                                                                      |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `app-search-documents-create-index`       | Creates the app-search-documents index in Elasticsearch |
 ## Build
 
 This project is distributed as a docker image. To build the image, run the following commands from the root of the project directory:

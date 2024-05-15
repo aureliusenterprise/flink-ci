@@ -2,7 +2,9 @@
 
 This project includes a [development container](https://containers.dev/) to simplify the setup process and provide a consistent development environment.
 
-You can use the dev container locally with either [Visual Studio Code](#visual-studio-code) or [PyCharm](#pycharm), or remotely with [GitHub Codespaces](#github-codespaces).
+You can use the dev container locally with either [Visual Studio Code](#visual-studio-code) or [PyCharm](#pycharm), remotely with [GitHub Codespaces](#github-codespaces), or with CLI.
+
+> **Note**: you nead at least ~18GB of RAM allocated to run the containers on your local machine.
 
 ## Visual Studio Code
 
@@ -74,3 +76,28 @@ To connect PyCharm to the Development Container, please [follow these instructio
 6. Once connected, you'll see "Dev Container: Aurelius Atlas - Flink" in the bottom-left corner of the VS Code window, indicating that you are now working inside the container.
 
 7. You're all set! You can now run, develop, build, and test the project using the provided development environment.
+
+## CLI (Linux/WSL)
+
+If you prefer to use any other code editor of your choice you can opt to start up the containers using devcontainers CLI. Afterwards simply login to the main dev container and run the commands from there.
+
+> **Note**: The following instructions assume that you have already installed [Docker](https://www.docker.com/).
+1. Make sure the Docker agent is running on your system.
+
+2. Clone the GitHub repository to your local machine.
+
+    ```bash
+    git clone https://github.com/aureliusenterprise/flink-ci.git
+    ```
+
+3. Navigate to the cloned project root and open the project in VS Code by running:
+
+    ```bash
+    cd flink-ci
+    devcontainer up --workspace-folder .
+    ```
+4. To login to the dev container run:
+    ```bash
+    docker exec -it flink-ci_devcontainer-dev-1 bash
+    ```
+    You're ready to go!
