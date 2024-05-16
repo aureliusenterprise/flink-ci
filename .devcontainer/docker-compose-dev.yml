@@ -47,7 +47,6 @@ services:
       - "21000:21000"
     restart: unless-stopped
     working_dir: /workspace
-    user: "${UID}"
 
   pyflink-jobmanager:
     build:
