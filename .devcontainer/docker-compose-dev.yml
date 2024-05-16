@@ -3,7 +3,7 @@ version: '3'
 services:
 
   dev:
-    image: flink:1.17.0
+    build: .
     environment:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: localhost
@@ -47,6 +47,7 @@ services:
       - "21000:21000"
     restart: unless-stopped
     working_dir: /workspace
+    user: "${UID}"
 
   pyflink-jobmanager:
     build:

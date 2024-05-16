@@ -4,7 +4,7 @@ This project includes a [development container](https://containers.dev/) to simp
 
 You can use the dev container locally with either [Visual Studio Code](#visual-studio-code) or [PyCharm](#pycharm), remotely with [GitHub Codespaces](#github-codespaces), or with CLI.
 
-> **Note**: you nead at least ~18GB of RAM allocated to run the containers on your local machine.
+> **Note**: You need at least ~18GB of RAM allocated to run the containers on your local machine.
 
 ## Visual Studio Code
 
