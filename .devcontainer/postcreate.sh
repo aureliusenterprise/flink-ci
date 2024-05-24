@@ -19,8 +19,9 @@ git config --global --add safe.directory $PWD
 
 # Ensure binaries are executable and add them to the PATH
 chmod +x -R $PWD/bin
-echo 'export PATH="$PATH:$PWD/bin"' >> ~/.bashrc
-echo 'export PATH="$PATH:/home/linuxbrew/.linuxbrew/bin"' >> ~/.bashrc
+echo "export PATH=\"\$PATH:$PWD/bin\"" >> /home/dev/.bashrc
+echo 'export PATH="$PATH:/home/linuxbrew/.linuxbrew/bin"' >> /home/dev/.bashrc
+echo "source $PWD/.venv/bin/activate" >> /home/dev/.bashrc
 
 # Install pre-commit hooks
 poetry run pre-commit install
