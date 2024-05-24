@@ -53,6 +53,8 @@ Regardless of your operating system, please install the [Remote Development exte
 
 6. Once connected, you'll see "Dev Container: Aurelius Atlas - Flink" in the bottom-left corner of the VS Code window, indicating that you are now working inside the container.
 
+6a. You can switch to a `dev` user by running `sudo -u dev bash` in the terminal. That way you are sure that you are not overwriting any files' permissions.
+
 7. You're all set! You can now run, develop, build, and test the project using the provided development environment.
 
 ## PyCharm
@@ -98,6 +100,6 @@ If you prefer to use any other code editor of your choice you can opt to start u
     ```
 4. To login to the dev container run:
     ```bash
-    docker exec -it flink-ci_devcontainer-dev-1 bash
+    docker exec -it --user dev flink-ci_devcontainer-dev-1 bash
     ```
     You're ready to go!
