@@ -1,4 +1,4 @@
-from flink:1.17.0
+FROM flink:1.17.0
 
 ARG USERNAME=dev
 ARG USER_UID=1000
