@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Copy Apache Atlas configuration to shared folder
-SOURCE_DIR=docker/docker-compose-atlas/*
-TARGET_DIR=/tmp/atlas-config
+SOURCE_DIR=docker/atlas-config/
+TARGET_DIR=/tmp/
 
 cp -avf ${SOURCE_DIR} ${TARGET_DIR}
 

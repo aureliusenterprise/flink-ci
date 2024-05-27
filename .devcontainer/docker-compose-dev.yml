@@ -3,9 +3,11 @@ version: '3'
 services:
 
   dev:
-    image: flink:1.17.0
+    build: .
     environment:
-      FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: localhost
+        taskmanager.numberOfTaskSlots: 2
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
       ATLAS_SERVER_URL: "http://localhost:21000/api/atlas"
       ELASTICSEARCH_APP_SEARCH_INDEX_NAME: "app_search_documents"
@@ -23,6 +25,7 @@ services:
       KAFKA_SOURCE_TOPIC_NAME: "ATLAS_ENTITIES"
       KEYCLOAK_CLIENT_ID: "m4i_atlas"
       KEYCLOAK_PASSWORD: "admin"
+      KEYCLOAK_ATLAS_ADMIN_PASSWORD: "admin"
       KEYCLOAK_REALM_NAME: "atlas-dev"
       KEYCLOAK_SERVER_URL: "http://localhost:8180/auth/"
       KEYCLOAK_USERNAME: "admin"
@@ -31,17 +34,28 @@ services:
       - SYS_PTRACE
     volumes:
       - ..:/workspace:cached
-      - atlas-config:/tmp/atlas-config
-      - keycloak-config:/tmp/keycloak-config
-      - keycloak-settings:/tmp/keycloak-settings
+      - /tmp/atlas-config:/tmp/atlas-config
+      - /tmp/keycloak-config:/tmp/keycloak-config
+      - /tmp/keycloak-settings:/tmp/keycloak-settings
       - checkpoints:/tmp/flink-checkpoints-directory
+    ports:
+      - "5601:5601"
+      - "8081:8081"
+      - "8082:8082"
+      - "8180:8180"
+      - "9990:9990"
+      - "21000:21000"
+    restart: unless-stopped
+    working_dir: /workspace
 
   pyflink-jobmanager:
     build:
       context: .
       dockerfile: ../docker/images/pyflink/Dockerfile
     environment:
-      FLINK_PROPERTIES: "jobmanager.rpc.address: localhost"
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: localhost
+        taskmanager.numberOfTaskSlots: 2
       POETRY_VIRTUALENVS_IN_PROJECT: "true"
     command: jobmanager
     volumes:

@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker exec keycloak /tmp/create_user.sh $KEYCLOAK_USERNAME $KEYCLOAK_PASSWORD ROLE_ADMIN;
