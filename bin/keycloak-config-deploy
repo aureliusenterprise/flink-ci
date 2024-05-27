@@ -1,7 +1,8 @@
 #!/bin/bash
 
 SOURCE_DIR=keycloak/config/atlas-dev.json
-TARGET_DIR=/tmp/keycloak-config/atlas-dev.json
+TARGET_DIR=/tmp/keycloak-config/
 
 # Copy Apache Atlas configuration to shared folder
-cp -rvf ${SOURCE_DIR} ${TARGET_DIR}
+mkdir -p $TARGET_DIR
+cp -avf ${SOURCE_DIR} ${TARGET_DIR}

@@ -74,5 +74,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  checkpoints:
   code:
