@@ -134,6 +134,7 @@ def test__handle_entity_created_with_breadcrumbs() -> None:
                 "qualifiedName": "test-data-entity",
                 "name": "test entity",
                 "unmapped_attributes": {"qualifiedName": "test-data-entity"},
+                "definition": "An example definition.",
             },
         ),
     )

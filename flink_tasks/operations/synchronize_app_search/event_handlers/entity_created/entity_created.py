@@ -75,6 +75,7 @@ def default_create_handler(  # noqa: C901, PLR0915, PLR0912
     entity_details = message.new_value
     qualified_name = getattr(entity_details.attributes, "qualified_name", entity_details.guid)
     name = getattr(entity_details.attributes, "name", qualified_name)
+    definition = getattr(entity_details.attributes, "definition", "")
 
     document = AppSearchDocument(
         id=message.new_value.guid,
@@ -83,6 +84,7 @@ def default_create_handler(  # noqa: C901, PLR0915, PLR0912
         referenceablequalifiedname=qualified_name,
         supertypenames=[entity_details.type_name],
         typename=entity_details.type_name,
+        definition=definition,
     )
     # Add document to created documents
     updated_documents[document.guid] = document
