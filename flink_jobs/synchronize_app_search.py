@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 from typing import TypedDict
 
+from elastic_transport._models import DefaultType
 from elasticsearch import Elasticsearch
 from pyflink.common import Types
 from pyflink.common.serialization import SimpleStringSchema
@@ -58,6 +59,7 @@ class SynchronizeAppSearchConfig(TypedDict):
     elasticsearch_endpoint: str
     elasticsearch_username: str
     elasticsearch_password: str
+    elasticsearch_certificate_path: str | DefaultType
     kafka_app_search_topic_name: str
     kafka_publish_state_topic_name: str
     kafka_bootstrap_server_hostname: str
@@ -138,6 +140,7 @@ def main(config: SynchronizeAppSearchConfig) -> None:
         return Elasticsearch(
             hosts=[config["elasticsearch_endpoint"]],
             basic_auth=(config["elasticsearch_username"], config["elasticsearch_password"]),
+            ca_certs=config["elasticsearch_certificate_path"],
         )
 
     def create_keycloak_client() -> KeycloakOpenID:
@@ -201,6 +204,7 @@ if __name__ == "__main__":
         "elasticsearch_endpoint": os.environ["ELASTICSEARCH_ENDPOINT"],
         "elasticsearch_username": os.environ["ELASTICSEARCH_USERNAME"],
         "elasticsearch_password": os.environ["ELASTICSEARCH_PASSWORD"],
+        "elasticsearch_certificate_path": os.environ.get("ELASTICSEARCH_CERTIFICATE_PATH", DefaultType(0)),
         "kafka_app_search_topic_name": os.environ["KAFKA_APP_SEARCH_TOPIC_NAME"],
         "kafka_publish_state_topic_name": os.environ["KAFKA_PUBLISH_STATE_TOPIC_NAME"],
         "kafka_bootstrap_server_hostname": os.environ["KAFKA_BOOTSTRAP_SERVER_HOSTNAME"],
