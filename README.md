@@ -49,13 +49,14 @@ The following Flink jobs are available for development and testing:
 The jobs are configured through environment variables. The following environment variables are available:
 
 | Variable Name                         | Description                                                                            | Required |
-| ------------------------------------- | -------------------------------------------------------------------------------------- | -------- |
+|---------------------------------------|----------------------------------------------------------------------------------------| -------- |
 | `ATLAS_SERVER_URL`                    | The URL of the Apache Atlas server.                                                    | Yes      |
 | `ELASTICSEARCH_APP_SEARCH_INDEX_NAME` | The name of the index in Elasticsearch to which app search documents are synchronized. | Yes      |
 | `ELASTICSEARCH_STATE_INDEX_NAME`      | The name of the index in Elasticsearch to which entity state is synchronized.          | Yes      |
 | `ELASTICSEARCH_ENDPOINT`              | The endpoint URL for the Elasticsearch instance.                                       | Yes      |
 | `ELASTICSEARCH_USERNAME`              | The username for Elasticsearch authentication.                                         | Yes      |
 | `ELASTICSEARCH_PASSWORD`              | The password for Elasticsearch authentication.                                         | Yes      |
+| `ELASTICSEARCH_CERTIFICATE_PATH`      | The certificate for Elasticsearch authentication.                                      | Yes      |
 | `KAFKA_APP_SEARCH_TOPIC_NAME`         | The Kafka topic name to which updated App Search documents will be produced.           | Yes      |
 | `KAFKA_PUBLISH_STATE_TOPIC_NAME`      | The Kafka topic name to which entity state updates will be produced.                   | Yes      |
 | `KAFKA_BOOTSTRAP_SERVER_HOSTNAME`     | The hostname of the Kafka bootstrap server.                                            | Yes      |
